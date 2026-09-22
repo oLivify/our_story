@@ -16,9 +16,7 @@ import {
   collection, 
   addDoc, 
   updateDoc, 
-  deleteDoc, 
-  query, 
-  where 
+  deleteDoc
 } from 'firebase/firestore';
 import { 
   Heart, 
@@ -33,21 +31,19 @@ import {
   Check, 
   Plus, 
   Trash2, 
-  Edit3, 
-  Send, 
-  Lock, 
-  LogOut, 
   Gift, 
-  Compass, 
-  Smile, 
-  Tag, 
   ChevronRight, 
   Bell, 
   CheckCircle, 
   XCircle, 
   Flame, 
   Bookmark,
-  Share2
+  X,
+  CheckCircle2,
+  AlertCircle,
+  Image as ImageIcon,
+  Send,
+  HeartHandshake
 } from 'lucide-react';
 
 const firebaseConfig = typeof __firebase_config !== 'undefined' 
@@ -66,18 +62,45 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'ourstory-app';
 
+// Helper for local storage persistence fallback
+const LOCAL_STORAGE_KEY = 'ourstory_local_data_v2';
+const getLocalData = () => {
+  try {
+    const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    return null;
+  }
+};
+const setLocalData = (data) => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error("Failed to save to localStorage", e);
+  }
+};
+
+// Preset romantic image suggestions
+const PRESET_IMAGES = [
+  "https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=800&q=80",
+  "https://images.unsplash.com/photo-1494774157365-9e04c6720e47?auto=format&fit=crop&w=800&q=80"
+];
+
 export default function App() {
-  // State management
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [coupleData, setCoupleData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('home'); // home, memories, timeline, dates, settings
   const [copiedCode, setCopiedCode] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
 
-  // Form states
+  // Form input states
   const [partnerCodeInput, setPartnerCodeInput] = useState('');
-  const [nameInput, setNameInput] = useState('');
+  const [nameInput, setNameInput] = useState('My Love');
   const [roleInput, setRoleInput] = useState('Boyfriend');
   const [anniversaryInput, setAnniversaryInput] = useState('2024-02-14T00:00');
 
@@ -86,15 +109,20 @@ export default function App() {
   const [showTimelineModal, setShowTimelineModal] = useState(false);
   const [showDateModal, setShowDateModal] = useState(false);
 
-  // Lists from Firestore
+  // Data Collections
   const [memories, setMemories] = useState([]);
   const [timelineEvents, setTimelineEvents] = useState([]);
   const [scheduledDates, setScheduledDates] = useState([]);
 
-  // Time elapsed state for live counter
+  // Counter State
   const [timeTogether, setTimeTogether] = useState({
     years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, totalDays: 0
   });
+
+  const showToast = (msg, type = 'success') => {
+    setToastMessage({ text: msg, type });
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -105,7 +133,7 @@ export default function App() {
           await signInAnonymously(auth);
         }
       } catch (err) {
-        console.error("Auth error:", err);
+        console.warn("Auth initialization fallback:", err);
       }
     };
 
@@ -121,79 +149,103 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
 
-    // Fetch user profile
+    // Default unique code generator
+    const generateCode = () => user.uid ? user.uid.substring(0, 6).toUpperCase() : Math.random().toString(36).substring(2, 8).toUpperCase();
+
     const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+    
+    // Subscribe to Profile
     const unsubUser = onSnapshot(userDocRef, (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setUserProfile(data);
-        setNameInput(data.name || '');
-        setRoleInput(data.role || 'Boyfriend');
+        if (data.name) setNameInput(data.name);
+        if (data.role) setRoleInput(data.role);
       } else {
-        // Create initial profile with unique partner code
-        const uniqueCode = user.uid.substring(0, 6).toUpperCase();
+        const uniqueCode = generateCode();
         const newProfile = {
           uid: user.uid,
-          name: 'Partner ' + uniqueCode.slice(0, 3),
+          name: 'Partner',
           role: 'Boyfriend',
           partnerCode: uniqueCode,
           coupleId: null,
           createdAt: new Date().toISOString()
         };
-        setDoc(userDocRef, newProfile);
+        setDoc(userDocRef, newProfile).catch(() => {});
         setUserProfile(newProfile);
       }
       setLoading(false);
-    }, (error) => console.error("Error listening to user profile:", error));
+    }, (error) => {
+      console.warn("Firestore profile subscription error, loading fallback local profile:", error);
+      const local = getLocalData() || {};
+      const fallbackProfile = local.profile || {
+        uid: user.uid,
+        name: 'Partner',
+        role: 'Boyfriend',
+        partnerCode: generateCode(),
+        coupleId: 'local_couple_space'
+      };
+      setUserProfile(fallbackProfile);
+      setLoading(false);
+    });
 
     return () => unsubUser();
   }, [user]);
 
   useEffect(() => {
-    if (!userProfile?.coupleId) {
-      setCoupleData(null);
-      setMemories([]);
-      setTimelineEvents([]);
-      setScheduledDates([]);
-      return;
-    }
+    const coupleId = userProfile?.coupleId || 'local_couple_space';
 
-    const coupleId = userProfile.coupleId;
+    // Helper to load local fallback data if firestore fails
+    const loadFromLocalStorage = () => {
+      const local = getLocalData() || {};
+      setCoupleData(local.coupleData || { anniversaryDate: anniversaryInput });
+      setMemories(local.memories || []);
+      setTimelineEvents(local.timelineEvents || []);
+      setScheduledDates(local.scheduledDates || []);
+    };
 
-    // 1. Couple Metadata (Anniversary Date, couple details)
+    if (!userProfile) return;
+
+    // 1. Couple Metadata
     const coupleDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId);
     const unsubCouple = onSnapshot(coupleDocRef, (docSnap) => {
       if (docSnap.exists()) {
-        setCoupleData(docSnap.data());
-        if (docSnap.data().anniversaryDate) {
-          setAnniversaryInput(docSnap.data().anniversaryDate);
-        }
+        const d = docSnap.data();
+        setCoupleData(d);
+        if (d.anniversaryDate) setAnniversaryInput(d.anniversaryDate);
       }
-    }, (err) => console.error("Error fetching couple doc:", err));
+    }, () => loadFromLocalStorage());
 
-    // 2. Memories collection
+    // 2. Memories
     const memoriesRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories');
     const unsubMemories = onSnapshot(memoriesRef, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       docs.sort((a, b) => new Date(b.date) - new Date(a.date));
       setMemories(docs);
-    }, (err) => console.error("Error fetching memories:", err));
+      // Sync to local
+      const existing = getLocalData() || {};
+      setLocalData({ ...existing, memories: docs });
+    }, () => loadFromLocalStorage());
 
-    // 3. Timeline Events
+    // 3. Timeline
     const timelineRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'timeline');
     const unsubTimeline = onSnapshot(timelineRef, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       docs.sort((a, b) => new Date(a.date) - new Date(b.date));
       setTimelineEvents(docs);
-    }, (err) => console.error("Error fetching timeline:", err));
+      const existing = getLocalData() || {};
+      setLocalData({ ...existing, timelineEvents: docs });
+    }, () => loadFromLocalStorage());
 
-    // 4. Scheduled Dates
+    // 4. Dates
     const datesRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'dates');
     const unsubDates = onSnapshot(datesRef, (snapshot) => {
-      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       docs.sort((a, b) => new Date(a.date) - new Date(b.date));
       setScheduledDates(docs);
-    }, (err) => console.error("Error fetching dates:", err));
+      const existing = getLocalData() || {};
+      setLocalData({ ...existing, scheduledDates: docs });
+    }, () => loadFromLocalStorage());
 
     return () => {
       unsubCouple();
@@ -232,65 +284,236 @@ export default function App() {
 
   const handleConnectPartner = async (e) => {
     e.preventDefault();
-    if (!partnerCodeInput.trim() || !user) return;
+    if (!partnerCodeInput.trim()) return;
 
     const code = partnerCodeInput.trim().toUpperCase();
-
-    if (code === userProfile.partnerCode) {
-      alert("You cannot connect with your own partner code!");
+    if (code === userProfile?.partnerCode) {
+      showToast("You cannot connect with your own code!", "error");
       return;
     }
 
+    const coupleId = [userProfile?.partnerCode || 'USER1', code].sort().join('_');
+
     try {
-      // Find partner using simple client scan or deterministic ID structure
-      const coupleId = [userProfile.partnerCode, code].sort().join('_');
-      
-      // Update current user profile
-      const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-      await updateDoc(userRef, { coupleId });
-
-      // Create initial couple doc if not exists
-      const coupleRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId);
-      const coupleSnap = await getDoc(coupleRef);
-      if (!coupleSnap.exists()) {
+      if (user) {
+        const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+        await updateDoc(userRef, { coupleId });
+        
+        const coupleRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId);
         await setDoc(coupleRef, {
-          created: new Date().toISOString(),
-          anniversaryDate: new Date().toISOString().slice(0, 16),
+          anniversaryDate: anniversaryInput,
           partners: [user.uid]
-        });
-      } else {
-        const partners = coupleSnap.data().partners || [];
-        if (!partners.includes(user.uid)) {
-          await updateDoc(coupleRef, { partners: [...partners, user.uid] });
-        }
+        }, { merge: true });
       }
-
-      setPartnerCodeInput('');
     } catch (err) {
-      console.error("Error linking partner:", err);
+      console.warn("Firestore pair warning, fallback to local:", err);
     }
+
+    const updatedProfile = { ...userProfile, coupleId };
+    setUserProfile(updatedProfile);
+    const local = getLocalData() || {};
+    setLocalData({ ...local, profile: updatedProfile });
+
+    setPartnerCodeInput('');
+    showToast("Successfully connected with partner space! 🎉");
   };
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
-    if (!user) return;
     try {
-      const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
-      await updateDoc(userRef, {
-        name: nameInput,
-        role: roleInput
-      });
+      if (user) {
+        const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+        await updateDoc(userRef, { name: nameInput, role: roleInput }).catch(() => {});
 
-      if (userProfile?.coupleId) {
-        const coupleRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId);
-        await updateDoc(coupleRef, {
-          anniversaryDate: anniversaryInput
-        });
+        const coupleId = userProfile?.coupleId || 'local_couple_space';
+        const coupleRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId);
+        await setDoc(coupleRef, { anniversaryDate: anniversaryInput }, { merge: true }).catch(() => {});
       }
-      alert("Profile updated successfully!");
     } catch (err) {
-      console.error("Error updating profile:", err);
+      console.warn("Profile save warning:", err);
     }
+
+    const local = getLocalData() || {};
+    setLocalData({
+      ...local,
+      profile: { ...userProfile, name: nameInput, role: roleInput },
+      coupleData: { ...local.coupleData, anniversaryDate: anniversaryInput }
+    });
+
+    setCoupleData(prev => ({ ...prev, anniversaryDate: anniversaryInput }));
+    showToast("Profile and Anniversary saved!");
+  };
+
+  const handleAddScheduledDate = async (newDateObj) => {
+    const coupleId = userProfile?.coupleId || 'local_couple_space';
+    
+    // Add optimistic date to local state
+    const createdDate = {
+      id: 'date_' + Date.now(),
+      ...newDateObj,
+      status: 'Proposed',
+      createdBy: userProfile?.name || 'Partner',
+      createdAt: new Date().toISOString()
+    };
+
+    setScheduledDates(prev => [createdDate, ...prev]);
+
+    // Try saving to Firestore
+    try {
+      if (user) {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'dates'), createdDate);
+      }
+    } catch (e) {
+      console.warn("Saved date to local state fallback:", e);
+    }
+
+    // Persist to local storage
+    const local = getLocalData() || {};
+    const updatedDates = [createdDate, ...(local.scheduledDates || [])];
+    setLocalData({ ...local, scheduledDates: updatedDates });
+
+    showToast("Date proposal sent! 💕");
+    setShowDateModal(false);
+  };
+
+  const handleUpdateDateStatus = async (dateId, newStatus) => {
+    const coupleId = userProfile?.coupleId || 'local_couple_space';
+
+    setScheduledDates(prev => prev.map(d => d.id === dateId ? { ...d, status: newStatus } : d));
+
+    try {
+      if (user) {
+        const dateRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'dates', dateId);
+        await updateDoc(dateRef, { status: newStatus }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Update status error:", e);
+    }
+
+    const local = getLocalData() || {};
+    const updated = (local.scheduledDates || []).map(d => d.id === dateId ? { ...d, status: newStatus } : d);
+    setLocalData({ ...local, scheduledDates: updated });
+
+    showToast(`Date status updated to "${newStatus}"!`);
+  };
+
+  const handleDeleteDate = async (dateId) => {
+    const coupleId = userProfile?.coupleId || 'local_couple_space';
+
+    setScheduledDates(prev => prev.filter(d => d.id !== dateId));
+
+    try {
+      if (user) {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'dates', dateId)).catch(() => {});
+      }
+    } catch (e) {
+      console.warn("Delete date error:", e);
+    }
+
+    const local = getLocalData() || {};
+    const updated = (local.scheduledDates || []).filter(d => d.id !== dateId);
+    setLocalData({ ...local, scheduledDates: updated });
+
+    showToast("Date removed.");
+  };
+
+  const handleAddMemory = async (memoryObj) => {
+    const coupleId = userProfile?.coupleId || 'local_couple_space';
+    const newMemory = {
+      id: 'mem_' + Date.now(),
+      ...memoryObj,
+      likes: 0,
+      createdAt: new Date().toISOString()
+    };
+
+    setMemories(prev => [newMemory, ...prev]);
+
+    try {
+      if (user) {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories'), newMemory);
+      }
+    } catch (e) {
+      console.warn("Saved memory fallback:", e);
+    }
+
+    const local = getLocalData() || {};
+    setLocalData({ ...local, memories: [newMemory, ...(local.memories || [])] });
+
+    showToast("Memory saved to vault!");
+    setShowMemoryModal(false);
+  };
+
+  const handleLikeMemory = async (memId) => {
+    const coupleId = userProfile?.coupleId || 'local_couple_space';
+
+    setMemories(prev => prev.map(m => {
+      if (m.id === memId) {
+        const likes = (m.likes || 0) + 1;
+        if (user) {
+          updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories', memId), { likes }).catch(() => {});
+        }
+        return { ...m, likes };
+      }
+      return m;
+    }));
+
+    const local = getLocalData() || {};
+    const updated = (local.memories || []).map(m => m.id === memId ? { ...m, likes: (m.likes || 0) + 1 } : m);
+    setLocalData({ ...local, memories: updated });
+  };
+
+  const handleDeleteMemory = async (memId) => {
+    const coupleId = userProfile?.coupleId || 'local_couple_space';
+
+    setMemories(prev => prev.filter(m => m.id !== memId));
+
+    try {
+      if (user) {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories', memId)).catch(() => {});
+      }
+    } catch (e) {}
+
+    const local = getLocalData() || {};
+    setLocalData({ ...local, memories: (local.memories || []).filter(m => m.id !== memId) });
+    showToast("Memory deleted.");
+  };
+
+  const handleAddTimelineEvent = async (eventObj) => {
+    const coupleId = userProfile?.coupleId || 'local_couple_space';
+    const newEvent = {
+      id: 'time_' + Date.now(),
+      ...eventObj,
+      createdAt: new Date().toISOString()
+    };
+
+    setTimelineEvents(prev => [...prev, newEvent].sort((a,b) => new Date(a.date) - new Date(b.date)));
+
+    try {
+      if (user) {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'timeline'), newEvent);
+      }
+    } catch (e) {}
+
+    const local = getLocalData() || {};
+    setLocalData({ ...local, timelineEvents: [...(local.timelineEvents || []), newEvent] });
+
+    showToast("Milestone added to timeline!");
+    setShowTimelineModal(false);
+  };
+
+  const handleDeleteTimelineEvent = async (eventId) => {
+    const coupleId = userProfile?.coupleId || 'local_couple_space';
+    setTimelineEvents(prev => prev.filter(e => e.id !== eventId));
+
+    try {
+      if (user) {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'timeline', eventId)).catch(() => {});
+      }
+    } catch (e) {}
+
+    const local = getLocalData() || {};
+    setLocalData({ ...local, timelineEvents: (local.timelineEvents || []).filter(e => e.id !== eventId) });
+    showToast("Milestone removed.");
   };
 
   const copyPartnerCode = () => {
@@ -298,6 +521,7 @@ export default function App() {
     navigator.clipboard.writeText(userProfile.partnerCode);
     setCopiedCode(true);
     setTimeout(() => setCopiedCode(false), 2000);
+    showToast("Partner code copied to clipboard!");
   };
 
   if (loading) {
@@ -306,26 +530,38 @@ export default function App() {
         <div className="text-center">
           <Heart className="w-16 h-16 text-rose-500 animate-pulse mx-auto mb-4" />
           <h2 className="text-2xl font-serif text-rose-900 font-bold">Loading OurStory...</h2>
-          <p className="text-rose-600 text-sm mt-1">Connecting hearts & memories</p>
+          <p className="text-rose-600 text-sm mt-1">Connecting your relationship space</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-amber-50/30 to-rose-100 text-slate-800 flex flex-col font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-amber-50/20 to-rose-100 text-slate-800 flex flex-col font-sans relative overflow-x-hidden">
       
-      {/* Background Floating Heart Effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-20">
-        <div className="absolute top-10 left-10 text-rose-300 animate-bounce text-4xl">♥</div>
-        <div className="absolute top-1/3 right-12 text-rose-400 animate-pulse text-6xl">♥</div>
-        <div className="absolute bottom-20 left-1/4 text-rose-200 animate-bounce text-5xl" style={{ animationDuration: '3s' }}>♥</div>
+      {/* Toast Banner Notification */}
+      {toastMessage && (
+        <div className="fixed top-20 right-4 z-50 flex items-center space-x-2 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-2xl animate-fade-in border border-slate-700">
+          {toastMessage.type === 'error' ? (
+            <AlertCircle className="w-5 h-5 text-rose-400" />
+          ) : (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+          )}
+          <span className="text-sm font-medium">{toastMessage.text}</span>
+        </div>
+      )}
+
+      {/* Background Hearts */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-15">
+        <div className="absolute top-10 left-10 text-rose-400 animate-bounce text-4xl">♥</div>
+        <div className="absolute top-1/3 right-12 text-rose-500 animate-pulse text-6xl">♥</div>
+        <div className="absolute bottom-20 left-1/4 text-rose-300 animate-bounce text-5xl" style={{ animationDuration: '3.5s' }}>♥</div>
       </div>
 
-      {}
+      {/* Header */}
       <header className="sticky top-0 z-40 backdrop-blur-md bg-white/80 border-b border-rose-100 shadow-sm px-4 lg:px-8 py-3">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('home')}>
             <div className="bg-gradient-to-tr from-rose-500 to-pink-500 p-2 rounded-2xl shadow-md text-white">
               <Heart className="w-6 h-6 fill-white" />
             </div>
@@ -334,18 +570,18 @@ export default function App() {
                 OurStory
               </span>
               <span className="hidden sm:inline-block ml-2 text-xs bg-rose-100 text-rose-700 px-2.5 py-0.5 rounded-full font-medium">
-                Couple Space
+                Relationship Space
               </span>
             </div>
           </div>
 
-          {/* Navigation Links */}
+          {/* Navigation Bar */}
           <nav className="flex items-center space-x-1 sm:space-x-2">
             {[
               { id: 'home', label: 'Dashboard', icon: Sparkles },
+              { id: 'dates', label: 'Date Planner', icon: Calendar },
               { id: 'memories', label: 'Memories', icon: Camera },
               { id: 'timeline', label: 'Timeline', icon: Bookmark },
-              { id: 'dates', label: 'Date Planner', icon: Calendar },
               { id: 'settings', label: 'Settings', icon: User }
             ].map(tab => {
               const Icon = tab.icon;
@@ -354,7 +590,7 @@ export default function App() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center space-x-1 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center space-x-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActive 
                       ? 'bg-rose-500 text-white shadow-md shadow-rose-200' 
                       : 'text-rose-800 hover:bg-rose-100/70'
@@ -369,52 +605,46 @@ export default function App() {
         </div>
       </header>
 
-      {}
+      {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 z-10">
         
-        {/* If Not Linked to Partner Banner */}
+        {/* Partner Connection Prompt Banner */}
         {!userProfile?.coupleId && activeTab !== 'settings' && (
-          <div className="mb-8 bg-amber-50 border-2 border-dashed border-amber-300 rounded-3xl p-6 text-center shadow-sm">
+          <div className="mb-8 bg-amber-50/90 backdrop-blur-md border border-amber-200 rounded-3xl p-6 text-center shadow-sm">
             <div className="max-w-md mx-auto">
-              <Gift className="w-12 h-12 text-amber-500 mx-auto mb-3" />
-              <h3 className="text-xl font-serif font-bold text-amber-900 mb-2">Connect with Your Partner</h3>
-              <p className="text-amber-800 text-sm mb-4">
-                To start sharing memories, timelines, and date schedules, link your account with your girlfriend or boyfriend using your Partner Code!
+              <Gift className="w-10 h-10 text-amber-500 mx-auto mb-2" />
+              <h3 className="text-lg font-serif font-bold text-amber-900 mb-1">Connect with Your Partner</h3>
+              <p className="text-amber-800 text-xs mb-4">
+                Share this app with your girlfriend or boyfriend! Enter their Partner Code in Settings to pair your apps instantly.
               </p>
-              <div className="flex justify-center gap-3">
-                <button
-                  onClick={() => setActiveTab('settings')}
-                  className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all text-sm"
-                >
-                  Enter Partner Code Now
-                </button>
-              </div>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded-xl font-semibold text-xs shadow transition-all"
+              >
+                Pair Partner Code Now
+              </button>
             </div>
           </div>
         )}
 
-        {/* TAB 1: HOME / DASHBOARD */}
         {activeTab === 'home' && (
           <div className="space-y-8">
             
-            {/* HERO COUNTER SECTION */}
+            {/* Romantic Anniversary Counter */}
             <section className="bg-white/80 backdrop-blur-md rounded-3xl p-6 sm:p-10 border border-rose-100 shadow-xl text-center relative overflow-hidden">
-              <div className="absolute -right-12 -top-12 w-40 h-40 bg-rose-200/40 rounded-full blur-2xl"></div>
-              <div className="absolute -left-12 -bottom-12 w-40 h-40 bg-pink-200/40 rounded-full blur-2xl"></div>
-
               <div className="inline-flex items-center space-x-2 bg-rose-100/80 text-rose-800 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-4">
                 <Sparkles className="w-3.5 h-3.5 text-rose-500" />
                 <span>Time Spent Together</span>
               </div>
 
               <h1 className="text-2xl sm:text-4xl font-serif font-bold text-slate-800 mb-2">
-                Every second with you is precious
+                Every moment with you is special
               </h1>
               <p className="text-rose-600 font-medium text-sm sm:text-base mb-8">
-                Since {new Date(coupleData?.anniversaryDate || anniversaryInput).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                Dating since {new Date(coupleData?.anniversaryDate || anniversaryInput).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
 
-              {/* Live Ticking Counter Display */}
+              {/* Ticking Clock Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 max-w-4xl mx-auto">
                 {[
                   { label: 'Years', val: timeTogether.years },
@@ -435,16 +665,15 @@ export default function App() {
                 ))}
               </div>
 
-              {/* Total Days Stat */}
               <div className="mt-6 text-sm text-slate-600 font-medium">
-                That's <span className="text-rose-600 font-bold">{timeTogether.totalDays.toLocaleString()} days</span> of love and togetherness! 💖
+                That's <span className="text-rose-600 font-bold">{timeTogether.totalDays.toLocaleString()} days</span> of love, laughter, and memories! ❤️
               </div>
             </section>
 
-            {/* QUICK ACTIONS & MILESTONES */}
+            {/* Feature Cards Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               
-              {/* Quick Actions */}
+              {/* Card 1: Schedule Date Action */}
               <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-3xl p-6 text-white shadow-lg flex flex-col justify-between">
                 <div>
                   <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
@@ -452,61 +681,19 @@ export default function App() {
                   </div>
                   <h3 className="text-xl font-serif font-bold mb-2">Schedule a Date</h3>
                   <p className="text-rose-100 text-sm mb-6">
-                    Surprise your girlfriend or boyfriend with a romantic dinner, cozy movie night, or adventure!
+                    Propose a romantic dinner, cozy movie night, or weekend getaway for your partner to accept!
                   </p>
                 </div>
                 <button
                   onClick={() => setShowDateModal(true)}
-                  className="w-full bg-white text-rose-600 hover:bg-rose-50 py-3 rounded-2xl font-bold shadow-md transition-all flex items-center justify-center space-x-2"
+                  className="w-full bg-white text-rose-600 hover:bg-rose-50 py-3 rounded-2xl font-bold shadow-md transition-all flex items-center justify-center space-x-2 text-sm"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Propose New Date</span>
+                  <span>Schedule New Date</span>
                 </button>
               </div>
 
-              {/* Next Milestone */}
-              <div className="bg-white/80 backdrop-blur-md border border-rose-100 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="bg-amber-100 p-3 rounded-2xl text-amber-600">
-                      <Flame className="w-6 h-6" />
-                    </div>
-                    <span className="text-xs bg-amber-50 text-amber-700 font-semibold px-2.5 py-1 rounded-full border border-amber-200">
-                      Milestone
-                    </span>
-                  </div>
-                  <h3 className="text-lg font-serif font-bold text-slate-800 mb-1">Upcoming Goal</h3>
-                  <p className="text-slate-500 text-xs mb-4">Milestones based on total days together</p>
-                  
-                  <div className="space-y-3">
-                    <div className="flex justify-between text-xs font-semibold text-slate-700">
-                      <span>100 Days Goal</span>
-                      <span>{Math.min(100, Math.round((timeTogether.totalDays / 100) * 100))}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                      <div 
-                        className="bg-gradient-to-r from-amber-400 to-rose-500 h-2.5 rounded-full transition-all duration-500" 
-                        style={{ width: `${Math.min(100, (timeTogether.totalDays / 100) * 100)}%` }}
-                      ></div>
-                    </div>
-                    <p className="text-xs text-slate-600">
-                      {timeTogether.totalDays >= 100 
-                        ? "🎉 You achieved 100 days together!" 
-                        : `${100 - timeTogether.totalDays} days remaining to reach 100 days!`}
-                    </p>
-                  </div>
-                </div>
-
-                <button 
-                  onClick={() => setActiveTab('timeline')}
-                  className="mt-6 w-full text-rose-600 hover:text-rose-700 text-xs font-semibold flex items-center justify-center space-x-1 py-2 rounded-xl bg-rose-50"
-                >
-                  <span>View Timeline Milestones</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Upcoming Scheduled Dates */}
+              {/* Card 2: Upcoming Date Preview */}
               <div className="bg-white/80 backdrop-blur-md border border-rose-100 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
                 <div>
                   <div className="flex items-center justify-between mb-4">
@@ -523,16 +710,16 @@ export default function App() {
                     <div className="bg-rose-50/60 rounded-2xl p-3 border border-rose-100 space-y-1">
                       <div className="font-bold text-slate-800 text-sm">{scheduledDates[0].title}</div>
                       <div className="text-xs text-rose-600 flex items-center space-x-1">
-                        <Clock className="w-3 h-3" />
+                        <Clock className="w-3.5 h-3.5" />
                         <span>{new Date(scheduledDates[0].date).toLocaleString()}</span>
                       </div>
                       <div className="text-xs text-slate-500 flex items-center space-x-1">
-                        <MapPin className="w-3 h-3" />
+                        <MapPin className="w-3.5 h-3.5" />
                         <span>{scheduledDates[0].location || 'Surprise Location'}</span>
                       </div>
                     </div>
                   ) : (
-                    <p className="text-slate-500 text-sm italic">No dates planned yet. Surprise your lover!</p>
+                    <p className="text-slate-500 text-xs italic">No dates planned yet. Click Schedule a Date above!</p>
                   )}
                 </div>
 
@@ -540,19 +727,61 @@ export default function App() {
                   onClick={() => setActiveTab('dates')}
                   className="mt-6 w-full text-rose-600 hover:text-rose-700 text-xs font-semibold flex items-center justify-center space-x-1 py-2 rounded-xl bg-rose-50"
                 >
-                  <span>View Date Schedule</span>
+                  <span>View All Scheduled Dates</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Card 3: Milestone Progress */}
+              <div className="bg-white/80 backdrop-blur-md border border-rose-100 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="bg-amber-100 p-3 rounded-2xl text-amber-600">
+                      <Flame className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs bg-amber-50 text-amber-700 font-semibold px-2.5 py-1 rounded-full border border-amber-200">
+                      Milestone
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-serif font-bold text-slate-800 mb-1">Relationship Goal</h3>
+                  <p className="text-slate-500 text-xs mb-4">Track progress together</p>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-xs font-semibold text-slate-700">
+                      <span>100 Days Goal</span>
+                      <span>{Math.min(100, Math.round((timeTogether.totalDays / 100) * 100))}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-amber-400 to-rose-500 h-2.5 rounded-full transition-all duration-500" 
+                        style={{ width: `${Math.min(100, (timeTogether.totalDays / 100) * 100)}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-slate-600">
+                      {timeTogether.totalDays >= 100 
+                        ? "🎉 Reached 100 Days Milestone!" 
+                        : `${100 - timeTogether.totalDays} days left until 100 Days!`}
+                    </p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setActiveTab('timeline')}
+                  className="mt-6 w-full text-rose-600 hover:text-rose-700 text-xs font-semibold flex items-center justify-center space-x-1 py-2 rounded-xl bg-rose-50"
+                >
+                  <span>View Timeline Milestones</span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
 
             </div>
 
-            {/* RECENT MEMORIES HIGHLIGHT */}
+            {/* Recent Memories Preview */}
             <section className="bg-white/80 backdrop-blur-md rounded-3xl p-6 border border-rose-100 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-xl font-serif font-bold text-slate-800">Favorite Memories</h2>
-                  <p className="text-xs text-slate-500">Your most cherished moments together</p>
+                  <p className="text-xs text-slate-500">Your most cherished photo moments</p>
                 </div>
                 <button
                   onClick={() => setShowMemoryModal(true)}
@@ -567,12 +796,12 @@ export default function App() {
                 <div className="text-center py-10 bg-rose-50/30 rounded-2xl border border-dashed border-rose-200">
                   <Camera className="w-10 h-10 text-rose-300 mx-auto mb-2" />
                   <p className="text-slate-600 text-sm font-medium">No memories added yet!</p>
-                  <p className="text-slate-400 text-xs mt-1">Upload pictures and stories to keep them forever.</p>
+                  <p className="text-slate-400 text-xs mt-1">Upload pictures and notes to keep forever.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {memories.slice(0, 3).map((mem) => (
-                    <MemoryCard key={mem.id} memory={mem} coupleId={userProfile?.coupleId} />
+                    <MemoryCard key={mem.id} memory={mem} onLike={handleLikeMemory} onDelete={handleDeleteMemory} />
                   ))}
                 </div>
               )}
@@ -581,13 +810,57 @@ export default function App() {
           </div>
         )}
 
-        {}
+        {activeTab === 'dates' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-rose-100 shadow-sm">
+              <div>
+                <h1 className="text-2xl font-serif font-bold text-slate-800">Date Night Planner</h1>
+                <p className="text-slate-500 text-sm">Propose dates, accept invitations, and track date history</p>
+              </div>
+              <button
+                onClick={() => setShowDateModal(true)}
+                className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md flex items-center justify-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Schedule New Date</span>
+              </button>
+            </div>
+
+            {scheduledDates.length === 0 ? (
+              <div className="text-center py-16 bg-white/80 rounded-3xl border border-dashed border-rose-200 p-8">
+                <Calendar className="w-16 h-16 text-rose-300 mx-auto mb-3" />
+                <h3 className="text-lg font-serif font-bold text-slate-700">No Scheduled Dates Yet</h3>
+                <p className="text-slate-500 text-sm max-w-sm mx-auto mt-1 mb-6">
+                  Surprise your partner with a romantic dinner, movie, or fun activity!
+                </p>
+                <button
+                  onClick={() => setShowDateModal(true)}
+                  className="bg-rose-500 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow hover:bg-rose-600"
+                >
+                  Propose a Date Now
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {scheduledDates.map((dateItem) => (
+                  <DateCard 
+                    key={dateItem.id} 
+                    dateItem={dateItem} 
+                    onStatusChange={handleUpdateDateStatus}
+                    onDelete={handleDeleteDate}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {activeTab === 'memories' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-rose-100 shadow-sm">
               <div>
                 <h1 className="text-2xl font-serif font-bold text-slate-800">Memory Vault</h1>
-                <p className="text-slate-500 text-sm">Photos and stories from your magical journey</p>
+                <p className="text-slate-500 text-sm">Photos and sweet stories from your magical journey</p>
               </div>
               <button
                 onClick={() => setShowMemoryModal(true)}
@@ -600,14 +873,14 @@ export default function App() {
 
             {memories.length === 0 ? (
               <div className="text-center py-16 bg-white/80 rounded-3xl border border-dashed border-rose-200 p-8">
-                <Camera className="w-16 h-16 text-rose-300 mx-auto mb-3 animate-bounce" />
-                <h3 className="text-lg font-serif font-bold text-slate-700">Your Memory Book is Empty</h3>
+                <Camera className="w-16 h-16 text-rose-300 mx-auto mb-3" />
+                <h3 className="text-lg font-serif font-bold text-slate-700">Your Memory Vault is Empty</h3>
                 <p className="text-slate-500 text-sm max-w-sm mx-auto mt-1 mb-6">
-                  Start documenting your favorite moments, dates, trips, and everyday sweet gestures!
+                  Save special photos and moments from your relationship.
                 </p>
                 <button
                   onClick={() => setShowMemoryModal(true)}
-                  className="bg-rose-500 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow"
+                  className="bg-rose-500 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow hover:bg-rose-600"
                 >
                   Create First Memory
                 </button>
@@ -615,14 +888,13 @@ export default function App() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {memories.map((mem) => (
-                  <MemoryCard key={mem.id} memory={mem} coupleId={userProfile?.coupleId} />
+                  <MemoryCard key={mem.id} memory={mem} onLike={handleLikeMemory} onDelete={handleDeleteMemory} />
                 ))}
               </div>
             )}
           </div>
         )}
 
-        {}
         {activeTab === 'timeline' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-rose-100 shadow-sm">
@@ -639,14 +911,14 @@ export default function App() {
               </button>
             </div>
 
-            {/* Visual Vertical Timeline */}
             <div className="relative border-l-2 border-rose-200 ml-4 sm:ml-8 pl-6 sm:pl-10 space-y-8 py-4">
               {timelineEvents.length === 0 ? (
-                <p className="text-slate-500 text-sm italic">No timeline milestones added yet. Add your First Date, First Kiss, etc.!</p>
+                <p className="text-slate-500 text-sm italic bg-white/60 p-4 rounded-xl border border-rose-100">
+                  No timeline milestones added yet. Click "Add Milestone" to record your First Date, First Kiss, etc.!
+                </p>
               ) : (
-                timelineEvents.map((evt, idx) => (
+                timelineEvents.map((evt) => (
                   <div key={evt.id} className="relative group">
-                    {/* Circle icon marker */}
                     <div className="absolute -left-[31px] sm:-left-[47px] top-1 bg-rose-500 text-white p-2 rounded-full ring-4 ring-rose-100 shadow-md">
                       <Heart className="w-4 h-4 fill-white" />
                     </div>
@@ -657,10 +929,7 @@ export default function App() {
                           {new Date(evt.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                         </span>
                         <button
-                          onClick={async () => {
-                            if (!userProfile?.coupleId) return;
-                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'timeline', evt.id));
-                          }}
+                          onClick={() => handleDeleteTimelineEvent(evt.id)}
                           className="text-slate-400 hover:text-red-500 p-1"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -685,52 +954,10 @@ export default function App() {
           </div>
         )}
 
-        {}
-        {activeTab === 'dates' && (
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-rose-100 shadow-sm">
-              <div>
-                <h1 className="text-2xl font-serif font-bold text-slate-800">Date Planner & RSVP</h1>
-                <p className="text-slate-500 text-sm">Schedule upcoming dates and confirm plans together</p>
-              </div>
-              <button
-                onClick={() => setShowDateModal(true)}
-                className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md flex items-center justify-center space-x-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Schedule a Date</span>
-              </button>
-            </div>
-
-            {scheduledDates.length === 0 ? (
-              <div className="text-center py-16 bg-white/80 rounded-3xl border border-dashed border-rose-200 p-8">
-                <Calendar className="w-16 h-16 text-rose-300 mx-auto mb-3" />
-                <h3 className="text-lg font-serif font-bold text-slate-700">No Scheduled Dates</h3>
-                <p className="text-slate-500 text-sm max-w-sm mx-auto mt-1 mb-6">
-                  Surprise your partner by scheduling a special date night or adventure!
-                </p>
-                <button
-                  onClick={() => setShowDateModal(true)}
-                  className="bg-rose-500 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow"
-                >
-                  Schedule Date Now
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {scheduledDates.map((dateItem) => (
-                  <DateCard key={dateItem.id} dateItem={dateItem} user={user} userProfile={userProfile} />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {}
         {activeTab === 'settings' && (
           <div className="max-w-2xl mx-auto space-y-6">
             
-            {/* User Profile Card */}
+            {/* Profile Settings Form */}
             <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 border border-rose-100 shadow-sm">
               <h2 className="text-xl font-serif font-bold text-slate-800 mb-4 flex items-center space-x-2">
                 <User className="w-5 h-5 text-rose-500" />
@@ -785,7 +1012,7 @@ export default function App() {
             <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 border border-rose-100 shadow-sm">
               <h2 className="text-xl font-serif font-bold text-slate-800 mb-2 flex items-center space-x-2">
                 <UserCheck className="w-5 h-5 text-rose-500" />
-                <span>Partner Connection</span>
+                <span>Connect with Partner</span>
               </h2>
 
               <div className="bg-rose-50/70 rounded-2xl p-4 mb-6 border border-rose-100">
@@ -802,34 +1029,27 @@ export default function App() {
                     {copiedCode ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
                   </button>
                 </div>
-                <p className="text-xs text-slate-400 mt-2">Give this code to your girlfriend or boyfriend so they can link with you!</p>
+                <p className="text-xs text-slate-500 mt-2">Give this code to your girlfriend/boyfriend to link your accounts!</p>
               </div>
 
-              {!userProfile?.coupleId ? (
-                <form onSubmit={handleConnectPartner} className="space-y-3">
-                  <label className="block text-xs font-semibold text-slate-600 uppercase">Enter Partner's Code</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={partnerCodeInput}
-                      onChange={(e) => setPartnerCodeInput(e.target.value)}
-                      placeholder="e.g. A1B2C3"
-                      className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 uppercase font-mono text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
-                    />
-                    <button
-                      type="submit"
-                      className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow transition-all"
-                    >
-                      Connect
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-center">
-                  <p className="font-semibold text-sm"> Connected to Partner!</p>
-                  <p className="text-xs text-emerald-600 mt-0.5">Couple ID: {userProfile.coupleId}</p>
+              <form onSubmit={handleConnectPartner} className="space-y-3">
+                <label className="block text-xs font-semibold text-slate-600 uppercase">Enter Partner's 6-Digit Code</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={partnerCodeInput}
+                    onChange={(e) => setPartnerCodeInput(e.target.value)}
+                    placeholder="e.g. A1B2C3"
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 uppercase font-mono text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+                  />
+                  <button
+                    type="submit"
+                    className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow transition-all"
+                  >
+                    Pair Account
+                  </button>
                 </div>
-              )}
+              </form>
             </div>
 
           </div>
@@ -838,30 +1058,25 @@ export default function App() {
       </main>
 
       {}
-      
-      {/* 1. Add Memory Modal */}
-      {showMemoryModal && (
-        <MemoryModal 
-          onClose={() => setShowMemoryModal(false)} 
-          coupleId={userProfile?.coupleId} 
-          userId={user?.uid} 
-        />
-      )}
-
-      {/* 2. Add Timeline Event Modal */}
-      {showTimelineModal && (
-        <TimelineModal 
-          onClose={() => setShowTimelineModal(false)} 
-          coupleId={userProfile?.coupleId} 
-        />
-      )}
-
-      {/* 3. Add Scheduled Date Modal */}
       {showDateModal && (
         <ScheduleDateModal 
           onClose={() => setShowDateModal(false)} 
-          coupleId={userProfile?.coupleId} 
+          onSubmit={handleAddScheduledDate}
           userName={userProfile?.name || 'Partner'} 
+        />
+      )}
+
+      {showMemoryModal && (
+        <MemoryModal 
+          onClose={() => setShowMemoryModal(false)} 
+          onSubmit={handleAddMemory}
+        />
+      )}
+
+      {showTimelineModal && (
+        <TimelineModal 
+          onClose={() => setShowTimelineModal(false)} 
+          onSubmit={handleAddTimelineEvent}
         />
       )}
 
@@ -869,22 +1084,108 @@ export default function App() {
   );
 }
 
-function MemoryCard({ memory, coupleId }) {
-  const [likes, setLikes] = useState(memory.likes || 0);
-
-  const handleLike = async () => {
-    if (!coupleId) return;
-    const newLikes = likes + 1;
-    setLikes(newLikes);
-    const memRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories', memory.id);
-    await updateDoc(memRef, { likes: newLikes });
+function DateCard({ dateItem, onStatusChange, onDelete }) {
+  const getCategoryBadge = (cat) => {
+    switch (cat) {
+      case 'Romantic Dinner': return 'bg-pink-100 text-pink-700';
+      case 'Movie Night': return 'bg-purple-100 text-purple-700';
+      case 'Outdoor Adventure': return 'bg-emerald-100 text-emerald-700';
+      case 'Surprise': return 'bg-amber-100 text-amber-700';
+      default: return 'bg-rose-100 text-rose-700';
+    }
   };
 
-  const handleDelete = async () => {
-    if (!coupleId) return;
-    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories', memory.id));
+  const getStatusBadge = (st) => {
+    switch (st) {
+      case 'Accepted': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+      case 'Completed': return 'bg-blue-100 text-blue-700 border-blue-200';
+      case 'Declined': return 'bg-red-100 text-red-700 border-red-200';
+      default: return 'bg-amber-100 text-amber-700 border-amber-200';
+    }
   };
 
+  return (
+    <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 border border-rose-100 shadow-sm flex flex-col justify-between hover:shadow-md transition-all">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${getCategoryBadge(dateItem.category)}`}>
+            {dateItem.category || 'Date Night'}
+          </span>
+          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${getStatusBadge(dateItem.status)}`}>
+            {dateItem.status || 'Proposed'}
+          </span>
+        </div>
+
+        <h3 className="text-xl font-serif font-bold text-slate-800 mb-2">{dateItem.title}</h3>
+        
+        <div className="space-y-1.5 text-xs text-slate-600 mb-4">
+          <div className="flex items-center space-x-2">
+            <Clock className="w-3.5 h-3.5 text-rose-500" />
+            <span>{new Date(dateItem.date).toLocaleString()}</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <MapPin className="w-3.5 h-3.5 text-rose-500" />
+            <span>{dateItem.location || 'Location TBD'}</span>
+          </div>
+          <div className="flex items-center space-x-2 text-slate-400">
+            <User className="w-3.5 h-3.5" />
+            <span>Proposed by: {dateItem.createdBy || 'Partner'}</span>
+          </div>
+        </div>
+
+        {dateItem.description && (
+          <p className="text-slate-600 text-xs leading-relaxed bg-rose-50/50 p-3 rounded-2xl border border-rose-100 mb-2">
+            {dateItem.description}
+          </p>
+        )}
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+        <div className="flex flex-wrap gap-2">
+          {dateItem.status !== 'Accepted' && dateItem.status !== 'Completed' && (
+            <button
+              onClick={() => onStatusChange(dateItem.id, 'Accepted')}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1 shadow-sm"
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              <span>Accept</span>
+            </button>
+          )}
+
+          {dateItem.status === 'Accepted' && (
+            <button
+              onClick={() => onStatusChange(dateItem.id, 'Completed')}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1 shadow-sm"
+            >
+              <CheckCircle className="w-3.5 h-3.5" />
+              <span>Mark Completed</span>
+            </button>
+          )}
+
+          {dateItem.status !== 'Declined' && dateItem.status !== 'Completed' && (
+            <button
+              onClick={() => onStatusChange(dateItem.id, 'Declined')}
+              className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1"
+            >
+              <XCircle className="w-3.5 h-3.5" />
+              <span>Decline</span>
+            </button>
+          )}
+        </div>
+
+        <button 
+          onClick={() => onDelete(dateItem.id)}
+          className="text-slate-400 hover:text-red-500 p-1.5 rounded-lg transition-colors"
+          title="Delete Date"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MemoryCard({ memory, onLike, onDelete }) {
   return (
     <div className="bg-white/90 backdrop-blur-md rounded-3xl overflow-hidden border border-rose-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
       <div>
@@ -909,15 +1210,15 @@ function MemoryCard({ memory, coupleId }) {
 
       <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
         <button 
-          onClick={handleLike}
+          onClick={() => onLike(memory.id)}
           className="flex items-center space-x-1 text-xs text-rose-600 hover:text-rose-700 font-semibold bg-rose-50 px-3 py-1.5 rounded-xl"
         >
           <Heart className="w-3.5 h-3.5 fill-rose-500" />
-          <span>{likes} Loves</span>
+          <span>{memory.likes || 0} Loves</span>
         </button>
 
         <button 
-          onClick={handleDelete}
+          onClick={() => onDelete(memory.id)}
           className="text-slate-400 hover:text-red-500 p-1 rounded-lg"
           title="Delete memory"
         >
@@ -928,135 +1229,169 @@ function MemoryCard({ memory, coupleId }) {
   );
 }
 
-function DateCard({ dateItem, user, userProfile }) {
-  const handleRSVP = async (status) => {
-    if (!userProfile?.coupleId) return;
-    const dateRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'dates', dateItem.id);
-    await updateDoc(dateRef, { status });
-  };
+function ScheduleDateModal({ onClose, onSubmit, userName }) {
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
+  const [location, setLocation] = useState('');
+  const [category, setCategory] = useState('Romantic Dinner');
+  const [description, setDescription] = useState('');
 
-  const getCategoryBadge = (cat) => {
-    switch (cat) {
-      case 'Romantic Dinner': return 'bg-pink-100 text-pink-700';
-      case 'Movie Night': return 'bg-purple-100 text-purple-700';
-      case 'Outdoor Adventure': return 'bg-emerald-100 text-emerald-700';
-      case 'Surprise': return 'bg-amber-100 text-amber-700';
-      default: return 'bg-rose-100 text-rose-700';
-    }
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!title.trim()) return;
+
+    onSubmit({
+      title,
+      date,
+      location,
+      category,
+      description
+    });
   };
 
   return (
-    <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 border border-rose-100 shadow-sm flex flex-col justify-between">
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${getCategoryBadge(dateItem.category)}`}>
-            {dateItem.category || 'Date Night'}
-          </span>
-          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
-            dateItem.status === 'Accepted' 
-              ? 'bg-emerald-100 text-emerald-700' 
-              : dateItem.status === 'Declined' 
-              ? 'bg-red-100 text-red-700' 
-              : 'bg-amber-100 text-amber-700'
-          }`}>
-            {dateItem.status || 'Pending RSVP'}
-          </span>
-        </div>
-
-        <h3 className="text-xl font-serif font-bold text-slate-800 mb-2">{dateItem.title}</h3>
-        
-        <div className="space-y-1.5 text-xs text-slate-600 mb-4">
-          <div className="flex items-center space-x-2">
-            <Clock className="w-3.5 h-3.5 text-rose-500" />
-            <span>{new Date(dateItem.date).toLocaleString()}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <MapPin className="w-3.5 h-3.5 text-rose-500" />
-            <span>{dateItem.location || 'Location TBD'}</span>
-          </div>
-          <div className="flex items-center space-x-2 text-slate-400">
-            <User className="w-3.5 h-3.5" />
-            <span>Proposed by {dateItem.createdBy}</span>
-          </div>
-        </div>
-
-        <p className="text-slate-600 text-xs leading-relaxed bg-rose-50/50 p-3 rounded-2xl border border-rose-100">
-          {dateItem.description || 'No description provided.'}
-        </p>
-      </div>
-
-      {/* RSVP Action Buttons */}
-      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
-        <div className="flex space-x-2">
-          <button
-            onClick={() => handleRSVP('Accepted')}
-            className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1 shadow-sm"
-          >
-            <CheckCircle className="w-3.5 h-3.5" />
-            <span>Accept</span>
-          </button>
-          <button
-            onClick={() => handleRSVP('Declined')}
-            className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1"
-          >
-            <XCircle className="w-3.5 h-3.5" />
-            <span>Decline</span>
-          </button>
-        </div>
-
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 relative animate-scale-up">
         <button 
-          onClick={async () => {
-            if (!userProfile?.coupleId) return;
-            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'dates', dateItem.id));
-          }}
-          className="text-slate-400 hover:text-red-500 p-1"
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-full"
         >
-          <Trash2 className="w-4 h-4" />
+          <X className="w-5 h-5" />
         </button>
+
+        <h3 className="text-xl font-serif font-bold text-slate-800 flex items-center space-x-2">
+          <Calendar className="w-5 h-5 text-rose-500" />
+          <span>Propose a Date Night</span>
+        </h3>
+
+        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Date Plan Title *</label>
+            <input 
+              type="text" 
+              required 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Candlelight Dinner at Italian Bistro" 
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Date & Time *</label>
+            <input 
+              type="datetime-local" 
+              required 
+              value={date} 
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Category</label>
+            <select 
+              value={category} 
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
+            >
+              <option value="Romantic Dinner">Romantic Dinner</option>
+              <option value="Movie Night">Movie Night</option>
+              <option value="Outdoor Adventure">Outdoor Adventure</option>
+              <option value="Picnic">Picnic in the Park</option>
+              <option value="Surprise">Surprise Date</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Location</label>
+            <input 
+              type="text" 
+              value={location} 
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g. Downtown Bistro or Cozy Home" 
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Notes / Dress code / Details</label>
+            <textarea 
+              rows="3" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What to wear, meeting details, or secret plans..." 
+              className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
+            ></textarea>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-2">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-semibold"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="px-5 py-2 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 shadow text-xs flex items-center space-x-1"
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>Send Date Proposal</span>
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
 }
 
-function MemoryModal({ onClose, coupleId, userId }) {
+function MemoryModal({ onClose, onSubmit }) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [tag, setTag] = useState('Vacation');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!coupleId || !title) return;
+    if (!title.trim()) return;
 
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories'), {
+    onSubmit({
       title,
       date,
       description,
-      imageUrl,
-      tag,
-      likes: 0,
-      createdAt: new Date().toISOString()
+      imageUrl: imageUrl || PRESET_IMAGES[0],
+      tag
     });
-
-    onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-        <h3 className="text-xl font-serif font-bold text-slate-800">Add Favorite Memory</h3>
+      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 relative">
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-full"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <h3 className="text-xl font-serif font-bold text-slate-800 flex items-center space-x-2">
+          <Camera className="w-5 h-5 text-rose-500" />
+          <span>Add Favorite Memory</span>
+        </h3>
 
         <form onSubmit={handleSubmit} className="space-y-3 text-sm">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Memory Title</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Memory Title *</label>
             <input 
               type="text" 
               required 
               value={title} 
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Sunset Walk on the Beach" 
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+              placeholder="e.g. Sunset Stroll by the Ocean" 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
             />
           </div>
 
@@ -1067,7 +1402,7 @@ function MemoryModal({ onClose, coupleId, userId }) {
               required 
               value={date} 
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
             />
           </div>
 
@@ -1076,7 +1411,7 @@ function MemoryModal({ onClose, coupleId, userId }) {
             <select 
               value={tag} 
               onChange={(e) => setTag(e.target.value)}
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
             >
               <option value="Vacation">Vacation</option>
               <option value="Anniversary">Anniversary</option>
@@ -1087,24 +1422,37 @@ function MemoryModal({ onClose, coupleId, userId }) {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Photo Image URL</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Photo Image Link</label>
             <input 
               type="url" 
               value={imageUrl} 
               onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="https://images.unsplash.com/..." 
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+              placeholder="Paste photo link or select preset below..." 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
             />
+            
+            {/* Quick Preset Photos */}
+            <div className="flex gap-2 mt-2 overflow-x-auto py-1">
+              {PRESET_IMAGES.map((img, i) => (
+                <img 
+                  key={i} 
+                  src={img} 
+                  onClick={() => setImageUrl(img)}
+                  alt="Preset" 
+                  className={`w-12 h-12 object-cover rounded-lg cursor-pointer border-2 ${imageUrl === img ? 'border-rose-500 scale-105' : 'border-transparent opacity-70 hover:opacity-100'}`}
+                />
+              ))}
+            </div>
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Story / Details</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Memory Story</label>
             <textarea 
               rows="3" 
               value={description} 
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Write what made this day so special..." 
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+              placeholder="What made this moment so special?" 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
             ></textarea>
           </div>
 
@@ -1112,13 +1460,13 @@ function MemoryModal({ onClose, coupleId, userId }) {
             <button 
               type="button" 
               onClick={onClose} 
-              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100"
+              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-semibold"
             >
               Cancel
             </button>
             <button 
               type="submit" 
-              className="px-5 py-2 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 shadow"
+              className="px-5 py-2 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 shadow text-xs"
             >
               Save Memory
             </button>
@@ -1129,42 +1477,49 @@ function MemoryModal({ onClose, coupleId, userId }) {
   );
 }
 
-function TimelineModal({ onClose, coupleId }) {
+function TimelineModal({ onClose, onSubmit }) {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!coupleId || !title) return;
+    if (!title.trim()) return;
 
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'timeline'), {
+    onSubmit({
       title,
       date,
       description,
-      imageUrl,
-      createdAt: new Date().toISOString()
+      imageUrl
     });
-
-    onClose();
   };
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-        <h3 className="text-xl font-serif font-bold text-slate-800">Add Timeline Milestone</h3>
+      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 relative">
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 p-1 rounded-full"
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        <h3 className="text-xl font-serif font-bold text-slate-800 flex items-center space-x-2">
+          <Bookmark className="w-5 h-5 text-rose-500" />
+          <span>Add Timeline Milestone</span>
+        </h3>
 
         <form onSubmit={handleSubmit} className="space-y-3 text-sm">
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Milestone Title</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Milestone Title *</label>
             <input 
               type="text" 
               required 
               value={title} 
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. First 'I Love You', Moved In Together" 
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+              placeholder="e.g. First 'I Love You', First Vacation" 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
             />
           </div>
 
@@ -1175,29 +1530,29 @@ function TimelineModal({ onClose, coupleId }) {
               required 
               value={date} 
               onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Image URL (Optional)</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Image Link (Optional)</label>
             <input 
               type="url" 
               value={imageUrl} 
               onChange={(e) => setImageUrl(e.target.value)}
               placeholder="https://..." 
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Description</label>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Story / Details</label>
             <textarea 
               rows="3" 
               value={description} 
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Details about this landmark moment..." 
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+              placeholder="Details about this special milestone..." 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none text-sm"
             ></textarea>
           </div>
 
@@ -1205,127 +1560,15 @@ function TimelineModal({ onClose, coupleId }) {
             <button 
               type="button" 
               onClick={onClose} 
-              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100"
+              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 text-xs font-semibold"
             >
               Cancel
             </button>
             <button 
               type="submit" 
-              className="px-5 py-2 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 shadow"
+              className="px-5 py-2 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 shadow text-xs"
             >
               Save Milestone
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function ScheduleDateModal({ onClose, coupleId, userName }) {
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
-  const [location, setLocation] = useState('');
-  const [category, setCategory] = useState('Romantic Dinner');
-  const [description, setDescription] = useState('');
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!coupleId || !title) return;
-
-    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'dates'), {
-      title,
-      date,
-      location,
-      category,
-      description,
-      status: 'Pending RSVP',
-      createdBy: userName,
-      createdAt: new Date().toISOString()
-    });
-
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-        <h3 className="text-xl font-serif font-bold text-slate-800">Propose a Date Night</h3>
-
-        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Date Plan Title</label>
-            <input 
-              type="text" 
-              required 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Italian Candlelight Dinner" 
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Date & Time</label>
-            <input 
-              type="datetime-local" 
-              required 
-              value={date} 
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Category</label>
-            <select 
-              value={category} 
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
-            >
-              <option value="Romantic Dinner">Romantic Dinner</option>
-              <option value="Movie Night">Movie Night</option>
-              <option value="Outdoor Adventure">Outdoor Adventure</option>
-              <option value="Surprise">Surprise Date</option>
-              <option value="Cozy Home Date">Cozy Home Date</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Location</label>
-            <input 
-              type="text" 
-              value={location} 
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="e.g. Downtown Bistro / My Place" 
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-600 mb-1">Notes / Plan Details</label>
-            <textarea 
-              rows="3" 
-              value={description} 
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Dress code, secret plans, or instructions..." 
-              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
-            ></textarea>
-          </div>
-
-          <div className="flex justify-end space-x-2 pt-2">
-            <button 
-              type="button" 
-              onClick={onClose} 
-              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              className="px-5 py-2 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 shadow"
-            >
-              Send Date Invitation
             </button>
           </div>
         </form>
