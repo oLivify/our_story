@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Endless Story | Romantic Photo Gallery</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        rose: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            200: '#fecdd3',
+                            300: '#fda4af',
+                            400: '#fb7185',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                        },
+                        blush: {
+                            100: '#fdf2f4',
+                            200: '#fbe4e8',
+                            300: '#f7cbd4',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        serif: ['"Playfair Display"', 'serif'],
+                        script: ['"Alex Brush"', 'cursive'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background: linear-gradient(135deg, #fff5f7 0%, #fedbd8 50%, #fbe4e8 100%);
+            background-attachment: fixed;
+            min-height: 100vh;
+            color: #4a3b40;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism elements */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 10px 30px -5px rgba(225, 29, 72, 0.08);
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.9);
+        }
+
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* Ambient floating elements */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Polaroids hover effect */
+        .polaroid-card {
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .polaroid-card:hover {
+            transform: translateY(-8px) rotate(1deg) scale(1.02);
+            box-shadow: 0 20px 35px -10px rgba(225, 29, 72, 0.2);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(253, 242, 244, 0.5);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #fda4af;
+            border-radius: 999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #fb7185;
+        }
+
+        /* Heart pulse animation */
+        @keyframes subtlePulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.08); }
+        }
+        .animate-heartbeat {
+            animation: subtlePulse 2s infinite ease-in-out;
+        }
+
+        /* Hide scrollbars for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="relative antialiased selection:bg-rose-200 selection:text-rose-900">
+
+    <canvas id="particle-canvas"></canvas>
+
+    <!-- Navigation Header -->
+    <nav class="sticky top-0 z-40 glass-nav transition-all duration-300 px-4 sm:px-8 py-3.5">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <a href="#" class="flex items-center gap-2 group">
+                <span class="w-10 h-10 rounded-full bg-gradient-to-tr from-rose-400 to-rose-300 flex items-center justify-center text-white shadow-md shadow-rose-200 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-heart text-lg animate-heartbeat"></i>
+                </span>
+                <div class="flex flex-col">
+                    <span class="font-script text-2xl sm:text-3xl font-bold text-rose-600 leading-none">Our Story</span>
+                    <span class="text-[10px] tracking-widest text-rose-400 font-semibold uppercase">Memory Vault</span>
+                </div>
+            </a>
+
+            <!-- Navigation Links -->
+            <div class="hidden md:flex items-center gap-1 bg-rose-50/80 p-1.5 rounded-full border border-rose-100/80 text-sm">
+                <button onclick="switchTab('gallery')" id="nav-gallery" class="nav-btn px-4 py-1.5 rounded-full font-medium transition-all bg-white text-rose-600 shadow-sm">
+                    <i class="fa-solid fa-images mr-1.5"></i> Gallery
+                </button>
+                <button onclick="switchTab('timeline')" id="nav-timeline" class="nav-btn px-4 py-1.5 rounded-full font-medium text-slate-600 hover:text-rose-600 transition-all">
+                    <i class="fa-solid fa-[# timeline] fa-timeline mr-1.5"></i> Memory Timeline
+                </button>
+                <button onclick="switchTab('reasons')" id="nav-reasons" class="nav-btn px-4 py-1.5 rounded-full font-medium text-slate-600 hover:text-rose-600 transition-all">
+                    <i class="fa-solid fa-envelope-open-text mr-1.5"></i> Love Notes
+                </button>
+            </div>
+
+            <!-- Actions Right -->
+            <div class="flex items-center gap-2">
+                <!-- Ambient Audio Generator Toggle -->
+                <button id="music-toggle" class="p-2.5 sm:px-3.5 sm:py-2 rounded-full glass-card hover:bg-white text-rose-500 flex items-center gap-2 transition-all text-xs font-semibold" title="Toggle Romantic Ambient Sound">
+                    <i class="fa-solid fa-music text-sm" id="music-icon"></i>
+                    <span class="hidden sm:inline" id="music-text">Music Off</span>
+                </button>
+
+                <!-- Add Memory Button -->
+                <button onclick="openModal('add-photo-modal')" class="px-4 py-2 rounded-full bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-600 hover:to-rose-500 text-white font-medium text-xs sm:text-sm shadow-md shadow-rose-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i>
+                    <span class="hidden sm:inline">Add Memory</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Subbar -->
+        <div class="md:hidden flex justify-around mt-2 pt-2 border-t border-rose-100 text-xs font-medium">
+            <button onclick="switchTab('gallery')" id="mob-nav-gallery" class="mob-nav-btn text-rose-600 py-1 font-bold">Gallery</button>
+            <button onclick="switchTab('timeline')" id="mob-nav-timeline" class="mob-nav-btn text-slate-500 py-1">Timeline</button>
+            <button onclick="switchTab('reasons')" id="mob-nav-reasons" class="mob-nav-btn text-slate-500 py-1">Love Notes</button>
+        </div>
+    </nav>
+
+    <header class="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pt-8 pb-6">
+        <div class="glass-panel rounded-3xl p-6 sm:p-10 shadow-xl shadow-rose-900/5 relative overflow-hidden border border-white">
+            <!-- Decorative corner background gradients -->
+            <div class="absolute -top-12 -right-12 w-48 h-48 bg-rose-200 rounded-full blur-3xl opacity-60"></div>
+            <div class="absolute -bottom-12 -left-12 w-48 h-48 bg-blush-300 rounded-full blur-3xl opacity-60"></div>
+
+            <div class="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                <!-- Text Header -->
+                <div class="text-center md:text-left max-w-xl">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100/80 text-rose-600 text-xs font-semibold tracking-wider uppercase mb-3">
+                        <i class="fa-solid fa-sparkles"></i> Dedicated To My Everything
+                    </div>
+                    <h1 class="font-serif text-3xl sm:text-5xl font-bold text-slate-800 leading-tight">
+                        Every Moment With You Is A <span class="font-script text-rose-500 text-4xl sm:text-6xl font-normal block sm:inline">Treasured Memory</span>
+                    </h1>
+                    <p class="text-slate-600 text-sm sm:text-base mt-3 leading-relaxed">
+                        A digital sanctuary for all our smile-filled dates, dreamy vacations, and quiet, beautiful days together.
+                    </p>
+                </div>
+
+                <!-- Milestone Counter Widget -->
+                <div class="glass-card rounded-2xl p-5 sm:p-6 text-center w-full md:w-auto min-w-[280px] border border-white/90">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs uppercase font-bold tracking-widest text-rose-400">Our Milestone</span>
+                        <button onclick="openModal('settings-modal')" class="text-slate-400 hover:text-rose-500 text-xs transition" title="Edit Start Date">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                    </div>
+
+                    <div class="flex items-baseline justify-center gap-2 my-2">
+                        <span id="days-count" class="font-serif text-4xl sm:text-5xl font-bold text-rose-600">0</span>
+                        <span class="font-script text-2xl text-rose-400">Days</span>
+                    </div>
+
+                    <p class="text-xs text-slate-500 italic" id="anniversary-subtitle">Together since October 14, 2022</p>
+
+                    <div class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-rose-100 text-[11px] text-slate-600">
+                        <div>
+                            <span id="counter-hours" class="block font-bold text-rose-500 text-sm">0</span> Hours
+                        </div>
+                        <div>
+                            <span id="counter-mins" class="block font-bold text-rose-500 text-sm">0</span> Mins
+                        </div>
+                        <div>
+                            <span id="counter-secs" class="block font-bold text-rose-500 text-sm">0</span> Secs
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="relative z-10 max-w-7xl mx-auto px-4 sm:px-8 pb-16">
+
+        <!-- TAB 1: GALLERY VIEW -->
+        <section id="tab-gallery" class="tab-content transition-opacity duration-300">
+            <!-- Filter Bar & Search -->
+            <div class="flex flex-col md:flex-row gap-4 items-center justify-between mb-8">
+                <!-- Tag Filters -->
+                <div class="flex items-center gap-2 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 no-scrollbar" id="category-filters">
+                    <!-- Dynamic categories generated via JS -->
+                </div>
+
+                <!-- Right Action Bar (Search & Slideshow) -->
+                <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                    <!-- Search Input -->
+                    <div class="relative w-full md:w-48">
+                        <input type="text" id="gallery-search" placeholder="Search memories..." oninput="filterGallery()" class="w-full pl-8 pr-3 py-2 text-xs rounded-full glass-card focus:outline-none focus:ring-2 focus:ring-rose-300 text-slate-700 placeholder-slate-400">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    </div>
+
+                    <!-- Start Slideshow -->
+                    <button onclick="startSlideshow()" class="px-4 py-2 rounded-full glass-card hover:bg-white text-rose-600 font-semibold text-xs transition flex items-center gap-2 shrink-0 border border-rose-200">
+                        <i class="fa-solid fa-play text-xs"></i> Slideshow
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dynamic Photo Grid -->
+            <div id="photo-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Photo Cards inserted dynamically via JavaScript -->
+            </div>
+
+            <!-- Empty State Display -->
+            <div id="empty-state" class="hidden text-center py-16 glass-card rounded-3xl mt-4">
+                <i class="fa-solid fa-heart-crack text-4xl text-rose-300 mb-3 animate-bounce"></i>
+                <h3 class="font-serif text-xl font-bold text-slate-700">No memories found</h3>
+                <p class="text-sm text-slate-500 mt-1">Try changing your search terms or add a new photo!</p>
+                <button onclick="openModal('add-photo-modal')" class="mt-4 px-5 py-2 rounded-full bg-rose-500 text-white font-medium text-xs hover:bg-rose-600 transition">
+                    Add First Photo
+                </button>
+            </div>
+        </section>
+
+        <section id="tab-timeline" class="tab-content hidden transition-opacity duration-300">
+            <div class="text-center max-w-xl mx-auto mb-10">
+                <span class="text-xs uppercase font-bold text-rose-500 tracking-widest">Chronological Journey</span>
+                <h2 class="font-serif text-3xl font-bold text-slate-800 mt-1">Our Story Through Time</h2>
+                <p class="text-sm text-slate-600 mt-2">Every step of our voyage recorded with love</p>
+            </div>
+
+            <!-- Vertical Timeline Container -->
+            <div class="relative max-w-4xl mx-auto px-4">
+                <!-- Center Line -->
+                <div class="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-rose-200 via-rose-300 to-rose-100 transform -translate-x-1/2"></div>
+
+                <!-- Dynamic Timeline Items Container -->
+                <div id="timeline-container" class="space-y-12 relative">
+                    <!-- Inserted via JS -->
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-reasons" class="tab-content hidden transition-opacity duration-300">
+            <div class="text-center max-w-xl mx-auto mb-10">
+                <span class="text-xs uppercase font-bold text-rose-500 tracking-widest">Little Reminders</span>
+                <h2 class="font-serif text-3xl font-bold text-slate-800 mt-1">Reasons Why I Love You</h2>
+                <p class="text-sm text-slate-600 mt-2">Click or tap any card to uncover a reason my heart belongs to you.</p>
+            </div>
+
+            <!-- Expandable Reasons Card Deck -->
+            <div id="reasons-deck" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                <!-- Dynamic Reason Cards inserted via JS -->
+            </div>
+
+            <!-- Random Reason Generator Widget -->
+            <div class="mt-12 max-w-2xl mx-auto glass-panel rounded-3xl p-8 text-center border border-white shadow-lg">
+                <i class="fa-solid fa-quote-left text-3xl text-rose-300 mb-2"></i>
+                <p id="random-quote-text" class="font-serif text-xl sm:text-2xl italic text-slate-800 my-4">
+                    "You make my world infinitely brighter just by existing."
+                </p>
+                <button onclick="generateRandomQuote()" class="px-6 py-2.5 rounded-full bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-600 hover:to-rose-500 text-white font-medium text-xs sm:text-sm shadow-md transition transform hover:scale-105">
+                    <i class="fa-solid fa-shuffle mr-1.5"></i> Another Reason
+                </button>
+            </div>
+        </section>
+
+    </main>
+
+
+    <!-- LIGHTBOX / FULL SCREEN PHOTO MODAL -->
+    <div id="lightbox-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 transition-all duration-300">
+        <button onclick="closeLightbox()" class="absolute top-4 right-4 z-50 text-white/80 hover:text-white w-10 h-10 rounded-full bg-white/10 flex items-center justify-center transition">
+            <i class="fa-solid fa-xmark text-xl"></i>
+        </button>
+
+        <div class="relative max-w-5xl w-full max-h-[90vh] flex flex-col lg:flex-row glass-panel rounded-3xl overflow-hidden shadow-2xl border border-white/20">
+            <!-- Image Container with Zoom support -->
+            <div class="relative flex-1 bg-black/40 flex items-center justify-center overflow-hidden min-h-[300px] lg:min-h-[500px]">
+                <img id="lb-image" src="" alt="Full View" class="max-h-[75vh] w-auto object-contain transition-transform duration-300 cursor-zoom-in" onclick="toggleZoom(this)">
+                
+                <!-- Prev/Next Controls -->
+                <button onclick="navigateLightbox(-1)" class="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/60 text-white flex items-center justify-center transition backdrop-blur-sm">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button onclick="navigateLightbox(1)" class="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/60 text-white flex items-center justify-center transition backdrop-blur-sm">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+
+            <!-- Details Sidebar -->
+            <div class="w-full lg:w-80 p-6 flex flex-col justify-between bg-white/90 overflow-y-auto">
+                <div>
+                    <!-- Category & Favorite -->
+                    <div class="flex items-center justify-between mb-3">
+                        <span id="lb-category" class="px-3 py-1 rounded-full bg-rose-100 text-rose-600 text-xs font-bold uppercase tracking-wider">Category</span>
+                        <button id="lb-fav-btn" onclick="toggleFavoriteCurrent()" class="text-slate-300 hover:text-rose-500 text-xl transition">
+                            <i class="fa-solid fa-heart"></i>
+                        </button>
+                    </div>
+
+                    <!-- Title & Memory Note -->
+                    <h3 id="lb-title" class="font-serif text-2xl font-bold text-slate-800">Memory Title</h3>
+                    <p id="lb-note" class="text-sm text-slate-600 mt-3 leading-relaxed whitespace-pre-line">Memory description notes go here...</p>
+                </div>
+
+                <div class="mt-6 pt-4 border-t border-rose-100 space-y-2 text-xs text-slate-500">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-regular fa-calendar text-rose-400"></i>
+                        <span id="lb-date">Date Tag</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-location-dot text-rose-400"></i>
+                        <span id="lb-location">Location Tag</span>
+                    </div>
+                    <button onclick="deleteCurrentPhoto()" class="w-full mt-4 py-2 text-rose-600 hover:bg-rose-50 rounded-xl transition text-xs font-semibold flex items-center justify-center gap-1.5 border border-rose-200">
+                        <i class="fa-regular fa-trash-can"></i> Delete Memory
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD NEW PHOTO / MEMORY MODAL -->
+    <div id="add-photo-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="glass-panel max-w-lg w-full rounded-3xl p-6 sm:p-8 shadow-2xl border border-white relative overflow-y-auto max-h-[90vh]">
+            <button onclick="closeModal('add-photo-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <h3 class="font-serif text-2xl font-bold text-slate-800 mb-1">Add New Memory</h3>
+            <p class="text-xs text-slate-500 mb-6">Upload a photo or paste an image URL to preserve a moment.</p>
+
+            <form id="add-photo-form" onsubmit="handleAddPhoto(event)" class="space-y-4">
+                <!-- Source Input Mode -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Photo Source</label>
+                    <div class="grid grid-cols-2 gap-2 mb-3">
+                        <button type="button" onclick="setPhotoInputType('url')" id="src-type-url" class="py-2 text-xs font-semibold rounded-xl border border-rose-300 bg-rose-500 text-white">Image URL</button>
+                        <button type="button" onclick="setPhotoInputType('file')" id="src-type-file" class="py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-600">Upload File</button>
+                    </div>
+
+                    <!-- URL Input -->
+                    <div id="url-input-container">
+                        <input type="url" id="photo-url" placeholder="https://images.unsplash.com/..." class="w-full px-4 py-2.5 text-xs rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white/80">
+                    </div>
+
+                    <!-- File Input -->
+                    <div id="file-input-container" class="hidden">
+                        <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-rose-300 rounded-2xl cursor-pointer bg-rose-50/50 hover:bg-rose-50 transition">
+                            <i class="fa-solid fa-cloud-arrow-up text-2xl text-rose-400 mb-2"></i>
+                            <span class="text-xs text-slate-600 font-medium">Click to upload photo from device</span>
+                            <span class="text-[10px] text-slate-400 mt-1">PNG, JPG, WEBP accepted</span>
+                            <input type="file" id="photo-file" accept="image/*" class="hidden" onchange="previewFile(event)">
+                        </label>
+                        <p id="file-name-preview" class="text-[11px] text-rose-600 mt-1 font-semibold truncate"></p>
+                    </div>
+                </div>
+
+                <!-- Title -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Title / Moment Name</label>
+                    <input type="text" id="photo-title" required placeholder="e.g. Sunset Coffee Date in Paris" class="w-full px-4 py-2.5 text-xs rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white/80">
+                </div>
+
+                <!-- Category & Date -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Category</label>
+                        <select id="photo-category" class="w-full px-3 py-2.5 text-xs rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white/80">
+                            <option value="Date Nights">Date Nights</option>
+                            <option value="Vacations">Vacations</option>
+                            <option value="Cute Moments">Cute Moments</option>
+                            <option value="Favorites">Favorites</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Date</label>
+                        <input type="date" id="photo-date" required class="w-full px-3 py-2.5 text-xs rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white/80">
+                    </div>
+                </div>
+
+                <!-- Location Tag -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Location</label>
+                    <input type="text" id="photo-location" placeholder="e.g. Central Park, NY" class="w-full px-4 py-2.5 text-xs rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white/80">
+                </div>
+
+                <!-- Memory Note -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Heartfelt Memory Note</label>
+                    <textarea id="photo-note" rows="3" placeholder="Write a sweet note about this memory..." class="w-full px-4 py-2.5 text-xs rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white/80 resize-none"></textarea>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full py-3 rounded-xl bg-gradient-to-r from-rose-500 to-rose-400 hover:from-rose-600 hover:to-rose-500 text-white font-bold text-xs uppercase tracking-wider shadow-md transition">
+                    Save To Our Album
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- SETTINGS MODAL (ANNIVERSARY DATE) -->
+    <div id="settings-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+        <div class="glass-panel max-w-sm w-full rounded-3xl p-6 shadow-2xl border border-white relative">
+            <button onclick="closeModal('settings-modal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+
+            <h3 class="font-serif text-xl font-bold text-slate-800 mb-2">Milestone Settings</h3>
+            <p class="text-xs text-slate-500 mb-4">Set the special date when your love story started.</p>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Anniversary / Start Date</label>
+                    <input type="date" id="start-date-input" class="w-full px-4 py-2 text-xs rounded-xl border border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-400 bg-white">
+                </div>
+
+                <button onclick="saveStartDate()" class="w-full py-2.5 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs uppercase tracking-wider shadow transition">
+                    Update Counter
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FULLSCREEN SLIDESHOW OVERLAY -->
+    <div id="slideshow-overlay" class="fixed inset-0 z-50 hidden bg-black/95 flex flex-col justify-between p-6">
+        <!-- Top Bar -->
+        <div class="flex items-center justify-between z-10 text-white/80">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-heart text-rose-500 animate-pulse"></i>
+                <span id="ss-count" class="text-xs font-semibold tracking-widest uppercase">Memory 1 of 10</span>
+            </div>
+            <button onclick="stopSlideshow()" class="text-white hover:text-rose-400 text-2xl transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Slideshow Image & Info -->
+        <div class="relative flex-1 flex flex-col items-center justify-center text-center my-auto">
+            <img id="ss-image" src="" alt="Slideshow" class="max-h-[70vh] max-w-[90vw] object-contain rounded-2xl shadow-2xl transition-all duration-700">
+            <div class="mt-6 max-w-xl">
+                <h3 id="ss-title" class="font-serif text-3xl font-bold text-white">Memory Title</h3>
+                <p id="ss-note" class="text-sm text-slate-300 mt-2 italic">Memory Note...</p>
+            </div>
+        </div>
+
+        <!-- Controls Bottom -->
+        <div class="flex items-center justify-center gap-6 z-10">
+            <button onclick="prevSlide()" class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+                <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <button id="ss-play-btn" onclick="toggleSlideshowPlay()" class="w-14 h-14 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center text-lg transition shadow-lg shadow-rose-900/50">
+                <i class="fa-solid fa-pause"></i>
+            </button>
+            <button onclick="nextSlide()" class="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition">
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+
+    <script>
+        // Sample Initial Photos Data
+        const defaultPhotos = [
+            {
+                id: '1',
+                title: 'Golden Hour at the Beach',
+                url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80',
+                category: 'Vacations',
+                date: '2023-07-15',
+                location: 'Malibu Coast',
+                note: 'We spent hours watching the waves roll in. You laughed so hard when the ocean water splashed your ice cream cone!',
+                isFavorite: true
+            },
+            {
+                id: '2',
+                title: 'Cozy Coffee Date',
+                url: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1200&q=80',
+                category: 'Date Nights',
+                date: '2023-11-04',
+                location: 'Little Corner Cafe',
+                note: 'Rainy Sunday afternoon. Warm lattes, acoustic music, and talking about our future together.',
+                isFavorite: true
+            },
+            {
+                id: '3',
+                title: 'Sunset Stroll in the Park',
+                url: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?auto=format&fit=crop&w=1200&q=80',
+                category: 'Cute Moments',
+                date: '2024-02-14',
+                location: 'Botanical Gardens',
+                note: 'Holding hands while the leaves turned orange and golden. You smiled at me and time stood still.',
+                isFavorite: false
+            },
+            {
+                id: '4',
+                title: 'Weekend Getaway Cabin',
+                url: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1200&q=80',
+                category: 'Vacations',
+                date: '2024-05-20',
+                location: 'Aspen Mountains',
+                note: 'Our cozy mountain sanctuary. Stargazing on the porch with hot cocoa wrapped under one blanket.',
+                isFavorite: true
+            },
+            {
+                id: '5',
+                title: 'Our First Candlelight Dinner',
+                url: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=1200&q=80',
+                category: 'Favorites',
+                date: '2022-10-14',
+                location: 'Downtown Bistro',
+                note: 'The night everything changed. I knew right here that you were the one I wanted to make memories with forever.',
+                isFavorite: true
+            }
+        ];
+
+        // Default Reasons Why I Love You
+        const defaultReasons = [
+            { icon: 'fa-face-smile-beam', title: 'Your Radiance', text: 'The way your entire face lights up whenever you laugh from the heart.' },
+            { icon: 'fa-heart', title: 'Kind Soul', text: 'Your endless empathy and how deeply you care for everyone around you.' },
+            { icon: 'fa-mug-hot', title: 'Little Habits', text: 'How you take tiny sleepy sips of coffee every morning.' },
+            { icon: 'fa-hand-holding-heart', title: 'Safe Haven', text: 'In your arms, the chaotic world outside feels peaceful and quiet.' },
+            { icon: 'fa-music', title: 'Your Laugh', text: 'My absolute favorite sound in the whole world.' },
+            { icon: 'fa-wand-magic-sparkles', title: 'Inspiration', text: 'You inspire me to be a better person each and every single day.' }
+        ];
+
+        // App State
+        let photos = [];
+        let currentFilter = 'All';
+        let currentTab = 'gallery';
+        let currentLightboxIndex = 0;
+        let startDate = '2022-10-14';
+        let inputType = 'url';
+        let tempFileBlob = null;
+
+        // Slideshow State
+        let slideshowInterval = null;
+        let slideshowIndex = 0;
+        let isSlideshowPlaying = false;
+
+        // Initialize Application
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLocalStorageData();
+            initParticles();
+            initAudioEngine();
+            renderCategories();
+            renderGallery();
+            renderTimeline();
+            renderReasons();
+            startMilestoneTimer();
+        });
+
+        // LocalStorage Management
+        function loadLocalStorageData() {
+            const storedPhotos = localStorage.getItem('girlfriend_photos_album');
+            photos = storedPhotos ? JSON.parse(storedPhotos) : defaultPhotos;
+
+            const storedDate = localStorage.getItem('girlfriend_anniversary_date');
+            if (storedDate) startDate = storedDate;
+            document.getElementById('start-date-input').value = startDate;
+        }
+
+        function savePhotosToStorage() {
+            localStorage.setItem('girlfriend_photos_album', JSON.stringify(photos));
+        }
+
+        // --- STREAMING_CHUNK:Category & Gallery Filtering ---
+        const categories = ['All', 'Favorites', 'Date Nights', 'Vacations', 'Cute Moments'];
+
+        function renderCategories() {
+            const container = document.getElementById('category-filters');
+            container.innerHTML = categories.map(cat => `
+                <button onclick="setFilter('${cat}')" class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 ${currentFilter === cat ? 'bg-rose-500 text-white shadow-md shadow-rose-200' : 'glass-card text-slate-600 hover:bg-white'}">
+                    ${cat === 'Favorites' ? '<i class="fa-solid fa-heart mr-1 text-rose-300"></i>' : ''} ${cat}
+                </button>
+            `).join('');
+        }
+
+        function setFilter(cat) {
+            currentFilter = cat;
+            renderCategories();
+            renderGallery();
+        }
+
+        function filterGallery() {
+            renderGallery();
+        }
+
+        function getFilteredPhotos() {
+            const searchQuery = document.getElementById('gallery-search').value.toLowerCase();
+            return photos.filter(photo => {
+                const matchesCategory = (currentFilter === 'All') ||
+                    (currentFilter === 'Favorites' ? photo.isFavorite : photo.category === currentFilter);
+                const matchesSearch = photo.title.toLowerCase().includes(searchQuery) ||
+                    photo.note.toLowerCase().includes(searchQuery) ||
+                    (photo.location && photo.location.toLowerCase().includes(searchQuery));
+                return matchesCategory && matchesSearch;
+            });
+        }
+
+        function renderGallery() {
+            const grid = document.getElementById('photo-grid');
+            const empty = document.getElementById('empty-state');
+            const filtered = getFilteredPhotos();
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+
+            empty.classList.add('hidden');
+            grid.innerHTML = filtered.map((photo, idx) => `
+                <div class="polaroid-card glass-panel rounded-2xl p-3 cursor-pointer group flex flex-col justify-between" onclick="openLightbox(${photos.indexOf(photo)})">
+                    <!-- Photo Display Container -->
+                    <div class="relative overflow-hidden rounded-xl aspect-[4/3] bg-rose-50">
+                        <img src="${photo.url}" alt="${photo.title}" loading="lazy" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" onerror="this.src='https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80'">
+                        
+                        <!-- Top Tag Badges -->
+                        <div class="absolute top-2 left-2 flex gap-1">
+                            <span class="px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md text-white text-[10px] font-semibold">
+                                ${photo.category}
+                            </span>
+                        </div>
+
+                        <!-- Heart Reaction Button -->
+                        <button onclick="event.stopPropagation(); toggleFavorite('${photo.id}')" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center transition ${photo.isFavorite ? 'text-rose-500 scale-110' : 'text-slate-400 hover:text-rose-400'}">
+                            <i class="fa-solid fa-heart"></i>
+                        </button>
+                    </div>
+
+                    <!-- Polaroid Footer Info -->
+                    <div class="mt-3 px-1">
+                        <h4 class="font-serif font-bold text-slate-800 text-base group-hover:text-rose-600 transition truncate">${photo.title}</h4>
+                        <p class="text-slate-500 text-xs mt-1 line-clamp-2 italic">${photo.note}</p>
+                        
+                        <div class="flex items-center justify-between mt-3 pt-2 border-t border-rose-100 text-[11px] text-slate-400">
+                            <span><i class="fa-regular fa-calendar mr-1"></i> ${formatDate(photo.date)}</span>
+                            ${photo.location ? `<span class="truncate max-w-[120px]"><i class="fa-solid fa-location-dot mr-1 text-rose-400"></i> ${photo.location}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- STREAMING_CHUNK:Timeline View Logic ---
+        function renderTimeline() {
+            const container = document.getElementById('timeline-container');
+            // Sort chronologically ascending
+            const sorted = [...photos].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            container.innerHTML = sorted.map((photo, index) => {
+                const isEven = index % 2 === 0;
+                return `
+                    <div class="relative flex flex-col md:flex-row items-center ${isEven ? 'md:flex-row-reverse' : ''} group">
+                        <!-- Timeline Heart Center Node -->
+                        <div class="absolute left-4 md:left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-rose-400 border-4 border-white shadow-md flex items-center justify-center text-white z-10 text-xs">
+                            <i class="fa-solid fa-heart"></i>
+                        </div>
+
+                        <!-- Content Card -->
+                        <div class="ml-12 md:ml-0 md:w-1/2 ${isEven ? 'md:pl-8' : 'md:pr-8'} w-full">
+                            <div class="glass-panel p-5 rounded-2xl border border-white/90 shadow-md hover:shadow-xl transition-all cursor-pointer" onclick="openLightbox(${photos.indexOf(photo)})">
+                                <span class="text-xs font-bold text-rose-500">${formatDate(photo.date)}</span>
+                                <h4 class="font-serif text-lg font-bold text-slate-800 mt-0.5">${photo.title}</h4>
+                                <div class="my-3 overflow-hidden rounded-xl h-40 bg-rose-100">
+                                    <img src="${photo.url}" alt="${photo.title}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                                </div>
+                                <p class="text-xs text-slate-600 italic leading-relaxed line-clamp-3">"${photo.note}"</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- STREAMING_CHUNK:Love Notes Deck Logic ---
+        function renderReasons() {
+            const deck = document.getElementById('reasons-deck');
+            deck.innerHTML = defaultReasons.map(r => `
+                <div class="glass-panel rounded-2xl p-6 border border-white hover:border-rose-200 transition-all duration-300 transform hover:-translate-y-1 group">
+                    <div class="w-12 h-12 rounded-2xl bg-rose-100 text-rose-500 flex items-center justify-center text-xl mb-4 group-hover:bg-rose-500 group-hover:text-white transition-colors">
+                        <i class="fa-solid ${r.icon}"></i>
+                    </div>
+                    <h4 class="font-serif font-bold text-lg text-slate-800 mb-2">${r.title}</h4>
+                    <p class="text-xs text-slate-600 leading-relaxed">${r.text}</p>
+                </div>
+            `).join('');
+        }
+
+        function generateRandomQuote() {
+            const quotes = [
+                "You are my today and all of my tomorrows.",
+                "If I had a flower for every time I thought of you, I could walk through my garden forever.",
+                "Your smile is literally my favorite destination.",
+                "I love you not only for what you are, but for what I am when I am with you.",
+                "You make the mundane moments feel extraordinary."
+            ];
+            const el = document.getElementById('random-quote-text');
+            const rand = quotes[Math.floor(Math.random() * quotes.length)];
+            el.style.opacity = '0';
+            setTimeout(() => {
+                el.innerText = `"${rand}"`;
+                el.style.opacity = '1';
+            }, 200);
+        }
+
+        // --- STREAMING_CHUNK:Lightbox Viewer Functions ---
+        function openLightbox(index) {
+            currentLightboxIndex = index;
+            updateLightboxContent();
+            document.getElementById('lightbox-modal').classList.remove('hidden');
+        }
+
+        function closeLightbox() {
+            document.getElementById('lightbox-modal').classList.add('hidden');
+        }
+
+        function updateLightboxContent() {
+            const photo = photos[currentLightboxIndex];
+            if (!photo) return;
+
+            document.getElementById('lb-image').src = photo.url;
+            document.getElementById('lb-category').innerText = photo.category;
+            document.getElementById('lb-title').innerText = photo.title;
+            document.getElementById('lb-note').innerText = photo.note || 'No note written for this memory.';
+            document.getElementById('lb-date').innerText = formatDate(photo.date);
+            document.getElementById('lb-location').innerText = photo.location || 'Location not specified';
+
+            const favBtn = document.getElementById('lb-fav-btn');
+            favBtn.className = photo.isFavorite ? 'text-rose-500 text-xl' : 'text-slate-300 hover:text-rose-500 text-xl';
+        }
+
+        function navigateLightbox(dir) {
+            currentLightboxIndex = (currentLightboxIndex + dir + photos.length) % photos.length;
+            updateLightboxContent();
+        }
+
+        function toggleFavoriteCurrent() {
+            const photo = photos[currentLightboxIndex];
+            if (photo) {
+                photo.isFavorite = !photo.isFavorite;
+                savePhotosToStorage();
+                updateLightboxContent();
+                renderGallery();
+            }
+        }
+
+        function toggleFavorite(id) {
+            const photo = photos.find(p => p.id === id);
+            if (photo) {
+                photo.isFavorite = !photo.isFavorite;
+                savePhotosToStorage();
+                renderGallery();
+            }
+        }
+
+        function deleteCurrentPhoto() {
+            if (confirm("Are you sure you want to remove this treasured memory?")) {
+                photos.splice(currentLightboxIndex, 1);
+                savePhotosToStorage();
+                closeLightbox();
+                renderGallery();
+                renderTimeline();
+            }
+        }
+
+        function toggleZoom(img) {
+            img.classList.toggle('scale-150');
+            img.classList.toggle('cursor-zoom-out');
+        }
+
+        // --- STREAMING_CHUNK:Photo Management & Input Modes ---
+        function setPhotoInputType(type) {
+            inputType = type;
+            const btnUrl = document.getElementById('src-type-url');
+            const btnFile = document.getElementById('src-type-file');
+            const contUrl = document.getElementById('url-input-container');
+            const contFile = document.getElementById('file-input-container');
+
+            if (type === 'url') {
+                btnUrl.className = 'py-2 text-xs font-semibold rounded-xl border border-rose-300 bg-rose-500 text-white';
+                btnFile.className = 'py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-600';
+                contUrl.classList.remove('hidden');
+                contFile.classList.add('hidden');
+            } else {
+                btnFile.className = 'py-2 text-xs font-semibold rounded-xl border border-rose-300 bg-rose-500 text-white';
+                btnUrl.className = 'py-2 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-600';
+                contFile.classList.remove('hidden');
+                contUrl.classList.add('hidden');
+            }
+        }
+
+        function previewFile(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('file-name-preview').innerText = `Selected: ${file.name}`;
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    tempFileBlob = evt.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleAddPhoto(e) {
+            e.preventDefault();
+            const title = document.getElementById('photo-title').value;
+            const category = document.getElementById('photo-category').value;
+            const date = document.getElementById('photo-date').value;
+            const location = document.getElementById('photo-location').value;
+            const note = document.getElementById('photo-note').value;
+
+            let finalUrl = '';
+            if (inputType === 'url') {
+                finalUrl = document.getElementById('photo-url').value;
+            } else {
+                finalUrl = tempFileBlob || 'https://images.unsplash.com/photo-1518199266791-5375a83190b7?auto=format&fit=crop&w=800&q=80';
+            }
+
+            const newPhoto = {
+                id: Date.now().toString(),
+                title,
+                url: finalUrl,
+                category,
+                date,
+                location,
+                note,
+                isFavorite: false
+            };
+
+            photos.unshift(newPhoto);
+            savePhotosToStorage();
+
+            // Refresh UI
+            renderGallery();
+            renderTimeline();
+            closeModal('add-photo-modal');
+            e.target.reset();
+            tempFileBlob = null;
+        }
+
+        // --- STREAMING_CHUNK:Slideshow Presentation Mode ---
+        function startSlideshow() {
+            if (photos.length === 0) return;
+            slideshowIndex = 0;
+            isSlideshowPlaying = true;
+            document.getElementById('slideshow-overlay').classList.remove('hidden');
+            updateSlideshowContent();
+            slideshowInterval = setInterval(nextSlide, 4000);
+        }
+
+        function stopSlideshow() {
+            clearInterval(slideshowInterval);
+            isSlideshowPlaying = false;
+            document.getElementById('slideshow-overlay').classList.add('hidden');
+        }
+
+        function updateSlideshowContent() {
+            const photo = photos[slideshowIndex];
+            if (!photo) return;
+            document.getElementById('ss-image').src = photo.url;
+            document.getElementById('ss-title').innerText = photo.title;
+            document.getElementById('ss-note').innerText = photo.note || '';
+            document.getElementById('ss-count').innerText = `Memory ${slideshowIndex + 1} of ${photos.length}`;
+        }
+
+        function nextSlide() {
+            slideshowIndex = (slideshowIndex + 1) % photos.length;
+            updateSlideshowContent();
+        }
+
+        function prevSlide() {
+            slideshowIndex = (slideshowIndex - 1 + photos.length) % photos.length;
+            updateSlideshowContent();
+        }
+
+        function toggleSlideshowPlay() {
+            const btn = document.getElementById('ss-play-btn');
+            if (isSlideshowPlaying) {
+                clearInterval(slideshowInterval);
+                isSlideshowPlaying = false;
+                btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+            } else {
+                slideshowInterval = setInterval(nextSlide, 4000);
+                isSlideshowPlaying = true;
+                btn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+            }
+        }
+
+        // --- STREAMING_CHUNK:Milestone Counter & Timer ---
+        function startMilestoneTimer() {
+            function update() {
+                const start = new Date(startDate).getTime();
+                const now = new Date().getTime();
+                const diff = Math.max(0, now - start);
+
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+                document.getElementById('days-count').innerText = days;
+                document.getElementById('counter-hours').innerText = hours;
+                document.getElementById('counter-mins').innerText = mins;
+                document.getElementById('counter-secs').innerText = secs;
+            }
+            update();
+            setInterval(update, 1000);
+        }
+
+        function saveStartDate() {
+            const val = document.getElementById('start-date-input').value;
+            if (val) {
+                startDate = val;
+                localStorage.setItem('girlfriend_anniversary_date', startDate);
+                document.getElementById('anniversary-subtitle').innerText = `Together since ${formatDate(startDate)}`;
+                closeModal('settings-modal');
+            }
+        }
+
+        // --- STREAMING_CHUNK:Web Audio API Ambient Sound Synthesizer ---
+        let audioCtx = null;
+        let isAudioPlaying = false;
+        let ambientOscillators = [];
+
+        function initAudioEngine() {
+            document.getElementById('music-toggle').addEventListener('click', () => {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                
+                if (isAudioPlaying) {
+                    stopAmbientMusic();
+                } else {
+                    startAmbientMusic();
+                }
+            });
+        }
+
+        function startAmbientMusic() {
+            if (!audioCtx) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            // Gentle ambient chord progression (Cmaj7 -> Fmaj7)
+            const chord = [261.63, 329.63, 392.00, 493.88]; // C4, E4, G4, B4
+            ambientOscillators = chord.map(freq => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.value = 0.03; // Gentle volume
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start();
+                return osc;
+            });
+
+            isAudioPlaying = true;
+            document.getElementById('music-text').innerText = "Music On";
+            document.getElementById('music-icon').className = "fa-solid fa-volume-high text-rose-500 animate-pulse";
+        }
+
+        function stopAmbientMusic() {
+            ambientOscillators.forEach(osc => osc.stop());
+            ambientOscillators = [];
+            isAudioPlaying = false;
+            document.getElementById('music-text').innerText = "Music Off";
+            document.getElementById('music-icon').className = "fa-solid fa-music";
+        }
+
+        // --- STREAMING_CHUNK:Background Particle Floating Hearts ---
+        function initParticles() {
+            const canvas = document.getElementById('particle-canvas');
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            const hearts = Array.from({ length: 25 }, () => ({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 12 + 8,
+                speedY: Math.random() * 0.6 + 0.2,
+                opacity: Math.random() * 0.4 + 0.1,
+                swing: Math.random() * 2
+            }));
+
+            function drawHeart(x, y, size, opacity) {
+                ctx.save();
+                ctx.globalAlpha = opacity;
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                const topCurveHeight = size * 0.3;
+                ctx.moveTo(x, y + topCurveHeight);
+                ctx.bezierCurveTo(x, y, x - size / 2, y, x - size / 2, y + topCurveHeight);
+                ctx.bezierCurveTo(x - size / 2, y + (size + topCurveHeight) / 2, x, y + size, x, y + size);
+                ctx.bezierCurveTo(x, y + size, x + size / 2, y + (size + topCurveHeight) / 2, x + size / 2, y + topCurveHeight);
+                ctx.bezierCurveTo(x + size / 2, y, x, y, x, y + topCurveHeight);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                hearts.forEach(h => {
+                    h.y -= h.speedY;
+                    h.x += Math.sin(h.y * 0.01) * 0.5;
+                    if (h.y < -20) {
+                        h.y = canvas.height + 20;
+                        h.x = Math.random() * canvas.width;
+                    }
+                    drawHeart(h.x, h.y, h.size, h.opacity);
+                });
+                requestAnimationFrame(animate);
+            }
+            animate();
+        }
+
+        // --- UI Navigation Helpers ---
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+
+            // Desktop Nav highlight
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.className = 'nav-btn px-4 py-1.5 rounded-full font-medium text-slate-600 hover:text-rose-600 transition-all';
+            });
+            document.getElementById(`nav-${tab}`).className = 'nav-btn px-4 py-1.5 rounded-full font-medium transition-all bg-white text-rose-600 shadow-sm';
+
+            // Mobile Nav Highlight
+            document.querySelectorAll('.mob-nav-btn').forEach(btn => {
+                btn.className = 'mob-nav-btn text-slate-500 py-1';
+            });
+            document.getElementById(`mob-nav-${tab}`).className = 'mob-nav-btn text-rose-600 font-bold py-1';
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const opts = { month: 'short', day: 'numeric', year: 'numeric' };
+            return new Date(dateStr).toLocaleDateString('en-US', opts);
+        }
+    </script>
+</body>
+</html>
