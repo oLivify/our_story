@@ -1,0 +1,1335 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { 
+  getAuth, 
+  signInAnonymously, 
+  signInWithCustomToken, 
+  onAuthStateChanged,
+  signOut
+} from 'firebase/auth';
+import { 
+  getFirestore, 
+  doc, 
+  setDoc, 
+  getDoc, 
+  onSnapshot, 
+  collection, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  where 
+} from 'firebase/firestore';
+import { 
+  Heart, 
+  Calendar, 
+  Clock, 
+  Camera, 
+  MapPin, 
+  Sparkles, 
+  User, 
+  UserCheck, 
+  Copy, 
+  Check, 
+  Plus, 
+  Trash2, 
+  Edit3, 
+  Send, 
+  Lock, 
+  LogOut, 
+  Gift, 
+  Compass, 
+  Smile, 
+  Tag, 
+  ChevronRight, 
+  Bell, 
+  CheckCircle, 
+  XCircle, 
+  Flame, 
+  Bookmark,
+  Share2
+} from 'lucide-react';
+
+const firebaseConfig = typeof __firebase_config !== 'undefined' 
+  ? JSON.parse(__firebase_config) 
+  : {
+      apiKey: "demo-api-key",
+      authDomain: "demo-app.firebaseapp.com",
+      projectId: "demo-app",
+      storageBucket: "demo-app.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:123456"
+    };
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'ourstory-app';
+
+export default function App() {
+  // State management
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [coupleData, setCoupleData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('home'); // home, memories, timeline, dates, settings
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  // Form states
+  const [partnerCodeInput, setPartnerCodeInput] = useState('');
+  const [nameInput, setNameInput] = useState('');
+  const [roleInput, setRoleInput] = useState('Boyfriend');
+  const [anniversaryInput, setAnniversaryInput] = useState('2024-02-14T00:00');
+
+  // Modals
+  const [showMemoryModal, setShowMemoryModal] = useState(false);
+  const [showTimelineModal, setShowTimelineModal] = useState(false);
+  const [showDateModal, setShowDateModal] = useState(false);
+
+  // Lists from Firestore
+  const [memories, setMemories] = useState([]);
+  const [timelineEvents, setTimelineEvents] = useState([]);
+  const [scheduledDates, setScheduledDates] = useState([]);
+
+  // Time elapsed state for live counter
+  const [timeTogether, setTimeTogether] = useState({
+    years: 0, months: 0, days: 0, hours: 0, minutes: 0, seconds: 0, totalDays: 0
+  });
+
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (err) {
+        console.error("Auth error:", err);
+      }
+    };
+
+    initAuth();
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (!currentUser) setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Fetch user profile
+    const userDocRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+    const unsubUser = onSnapshot(userDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setUserProfile(data);
+        setNameInput(data.name || '');
+        setRoleInput(data.role || 'Boyfriend');
+      } else {
+        // Create initial profile with unique partner code
+        const uniqueCode = user.uid.substring(0, 6).toUpperCase();
+        const newProfile = {
+          uid: user.uid,
+          name: 'Partner ' + uniqueCode.slice(0, 3),
+          role: 'Boyfriend',
+          partnerCode: uniqueCode,
+          coupleId: null,
+          createdAt: new Date().toISOString()
+        };
+        setDoc(userDocRef, newProfile);
+        setUserProfile(newProfile);
+      }
+      setLoading(false);
+    }, (error) => console.error("Error listening to user profile:", error));
+
+    return () => unsubUser();
+  }, [user]);
+
+  useEffect(() => {
+    if (!userProfile?.coupleId) {
+      setCoupleData(null);
+      setMemories([]);
+      setTimelineEvents([]);
+      setScheduledDates([]);
+      return;
+    }
+
+    const coupleId = userProfile.coupleId;
+
+    // 1. Couple Metadata (Anniversary Date, couple details)
+    const coupleDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId);
+    const unsubCouple = onSnapshot(coupleDocRef, (docSnap) => {
+      if (docSnap.exists()) {
+        setCoupleData(docSnap.data());
+        if (docSnap.data().anniversaryDate) {
+          setAnniversaryInput(docSnap.data().anniversaryDate);
+        }
+      }
+    }, (err) => console.error("Error fetching couple doc:", err));
+
+    // 2. Memories collection
+    const memoriesRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories');
+    const unsubMemories = onSnapshot(memoriesRef, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      docs.sort((a, b) => new Date(b.date) - new Date(a.date));
+      setMemories(docs);
+    }, (err) => console.error("Error fetching memories:", err));
+
+    // 3. Timeline Events
+    const timelineRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'timeline');
+    const unsubTimeline = onSnapshot(timelineRef, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      docs.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setTimelineEvents(docs);
+    }, (err) => console.error("Error fetching timeline:", err));
+
+    // 4. Scheduled Dates
+    const datesRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'dates');
+    const unsubDates = onSnapshot(datesRef, (snapshot) => {
+      const docs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      docs.sort((a, b) => new Date(a.date) - new Date(b.date));
+      setScheduledDates(docs);
+    }, (err) => console.error("Error fetching dates:", err));
+
+    return () => {
+      unsubCouple();
+      unsubMemories();
+      unsubTimeline();
+      unsubDates();
+    };
+  }, [userProfile?.coupleId]);
+
+  useEffect(() => {
+    const anniversary = coupleData?.anniversaryDate || anniversaryInput;
+    if (!anniversary) return;
+
+    const calculateTime = () => {
+      const start = new Date(anniversary).getTime();
+      const now = new Date().getTime();
+      const diff = Math.max(0, now - start);
+
+      const seconds = Math.floor((diff / 1000) % 60);
+      const minutes = Math.floor((diff / (1000 * 60)) % 60);
+      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
+      const totalDays = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+      const years = Math.floor(totalDays / 365);
+      const remainingDaysAfterYears = totalDays % 365;
+      const months = Math.floor(remainingDaysAfterYears / 30);
+      const days = remainingDaysAfterYears % 30;
+
+      setTimeTogether({ years, months, days, hours, minutes, seconds, totalDays });
+    };
+
+    calculateTime();
+    const interval = setInterval(calculateTime, 1000);
+    return () => clearInterval(interval);
+  }, [coupleData?.anniversaryDate, anniversaryInput]);
+
+  const handleConnectPartner = async (e) => {
+    e.preventDefault();
+    if (!partnerCodeInput.trim() || !user) return;
+
+    const code = partnerCodeInput.trim().toUpperCase();
+
+    if (code === userProfile.partnerCode) {
+      alert("You cannot connect with your own partner code!");
+      return;
+    }
+
+    try {
+      // Find partner using simple client scan or deterministic ID structure
+      const coupleId = [userProfile.partnerCode, code].sort().join('_');
+      
+      // Update current user profile
+      const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+      await updateDoc(userRef, { coupleId });
+
+      // Create initial couple doc if not exists
+      const coupleRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId);
+      const coupleSnap = await getDoc(coupleRef);
+      if (!coupleSnap.exists()) {
+        await setDoc(coupleRef, {
+          created: new Date().toISOString(),
+          anniversaryDate: new Date().toISOString().slice(0, 16),
+          partners: [user.uid]
+        });
+      } else {
+        const partners = coupleSnap.data().partners || [];
+        if (!partners.includes(user.uid)) {
+          await updateDoc(coupleRef, { partners: [...partners, user.uid] });
+        }
+      }
+
+      setPartnerCodeInput('');
+    } catch (err) {
+      console.error("Error linking partner:", err);
+    }
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    if (!user) return;
+    try {
+      const userRef = doc(db, 'artifacts', appId, 'users', user.uid, 'profile', 'info');
+      await updateDoc(userRef, {
+        name: nameInput,
+        role: roleInput
+      });
+
+      if (userProfile?.coupleId) {
+        const coupleRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId);
+        await updateDoc(coupleRef, {
+          anniversaryDate: anniversaryInput
+        });
+      }
+      alert("Profile updated successfully!");
+    } catch (err) {
+      console.error("Error updating profile:", err);
+    }
+  };
+
+  const copyPartnerCode = () => {
+    if (!userProfile?.partnerCode) return;
+    navigator.clipboard.writeText(userProfile.partnerCode);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 2000);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-rose-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Heart className="w-16 h-16 text-rose-500 animate-pulse mx-auto mb-4" />
+          <h2 className="text-2xl font-serif text-rose-900 font-bold">Loading OurStory...</h2>
+          <p className="text-rose-600 text-sm mt-1">Connecting hearts & memories</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-rose-50 via-amber-50/30 to-rose-100 text-slate-800 flex flex-col font-sans relative overflow-x-hidden">
+      
+      {/* Background Floating Heart Effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0 opacity-20">
+        <div className="absolute top-10 left-10 text-rose-300 animate-bounce text-4xl">♥</div>
+        <div className="absolute top-1/3 right-12 text-rose-400 animate-pulse text-6xl">♥</div>
+        <div className="absolute bottom-20 left-1/4 text-rose-200 animate-bounce text-5xl" style={{ animationDuration: '3s' }}>♥</div>
+      </div>
+
+      {}
+      <header className="sticky top-0 z-40 backdrop-blur-md bg-white/80 border-b border-rose-100 shadow-sm px-4 lg:px-8 py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="bg-gradient-to-tr from-rose-500 to-pink-500 p-2 rounded-2xl shadow-md text-white">
+              <Heart className="w-6 h-6 fill-white" />
+            </div>
+            <div>
+              <span className="text-2xl font-serif font-bold bg-gradient-to-r from-rose-600 to-pink-600 bg-clip-text text-transparent">
+                OurStory
+              </span>
+              <span className="hidden sm:inline-block ml-2 text-xs bg-rose-100 text-rose-700 px-2.5 py-0.5 rounded-full font-medium">
+                Couple Space
+              </span>
+            </div>
+          </div>
+
+          {/* Navigation Links */}
+          <nav className="flex items-center space-x-1 sm:space-x-2">
+            {[
+              { id: 'home', label: 'Dashboard', icon: Sparkles },
+              { id: 'memories', label: 'Memories', icon: Camera },
+              { id: 'timeline', label: 'Timeline', icon: Bookmark },
+              { id: 'dates', label: 'Date Planner', icon: Calendar },
+              { id: 'settings', label: 'Settings', icon: User }
+            ].map(tab => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center space-x-1 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    isActive 
+                      ? 'bg-rose-500 text-white shadow-md shadow-rose-200' 
+                      : 'text-rose-800 hover:bg-rose-100/70'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span className="hidden md:inline">{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+      </header>
+
+      {}
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-8 z-10">
+        
+        {/* If Not Linked to Partner Banner */}
+        {!userProfile?.coupleId && activeTab !== 'settings' && (
+          <div className="mb-8 bg-amber-50 border-2 border-dashed border-amber-300 rounded-3xl p-6 text-center shadow-sm">
+            <div className="max-w-md mx-auto">
+              <Gift className="w-12 h-12 text-amber-500 mx-auto mb-3" />
+              <h3 className="text-xl font-serif font-bold text-amber-900 mb-2">Connect with Your Partner</h3>
+              <p className="text-amber-800 text-sm mb-4">
+                To start sharing memories, timelines, and date schedules, link your account with your girlfriend or boyfriend using your Partner Code!
+              </p>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl font-semibold shadow-md transition-all text-sm"
+                >
+                  Enter Partner Code Now
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 1: HOME / DASHBOARD */}
+        {activeTab === 'home' && (
+          <div className="space-y-8">
+            
+            {/* HERO COUNTER SECTION */}
+            <section className="bg-white/80 backdrop-blur-md rounded-3xl p-6 sm:p-10 border border-rose-100 shadow-xl text-center relative overflow-hidden">
+              <div className="absolute -right-12 -top-12 w-40 h-40 bg-rose-200/40 rounded-full blur-2xl"></div>
+              <div className="absolute -left-12 -bottom-12 w-40 h-40 bg-pink-200/40 rounded-full blur-2xl"></div>
+
+              <div className="inline-flex items-center space-x-2 bg-rose-100/80 text-rose-800 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider mb-4">
+                <Sparkles className="w-3.5 h-3.5 text-rose-500" />
+                <span>Time Spent Together</span>
+              </div>
+
+              <h1 className="text-2xl sm:text-4xl font-serif font-bold text-slate-800 mb-2">
+                Every second with you is precious
+              </h1>
+              <p className="text-rose-600 font-medium text-sm sm:text-base mb-8">
+                Since {new Date(coupleData?.anniversaryDate || anniversaryInput).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+              </p>
+
+              {/* Live Ticking Counter Display */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 max-w-4xl mx-auto">
+                {[
+                  { label: 'Years', val: timeTogether.years },
+                  { label: 'Months', val: timeTogether.months },
+                  { label: 'Days', val: timeTogether.days },
+                  { label: 'Hours', val: timeTogether.hours },
+                  { label: 'Minutes', val: timeTogether.minutes },
+                  { label: 'Seconds', val: timeTogether.seconds }
+                ].map((item, idx) => (
+                  <div key={idx} className="bg-gradient-to-b from-rose-50 to-white border border-rose-100/80 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all">
+                    <div className="text-3xl sm:text-4xl font-serif font-extrabold text-rose-600">
+                      {String(item.val).padStart(2, '0')}
+                    </div>
+                    <div className="text-xs font-medium text-slate-500 uppercase tracking-wide mt-1">
+                      {item.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Total Days Stat */}
+              <div className="mt-6 text-sm text-slate-600 font-medium">
+                That's <span className="text-rose-600 font-bold">{timeTogether.totalDays.toLocaleString()} days</span> of love and togetherness! 💖
+              </div>
+            </section>
+
+            {/* QUICK ACTIONS & MILESTONES */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              
+              {/* Quick Actions */}
+              <div className="bg-gradient-to-br from-rose-500 to-pink-600 rounded-3xl p-6 text-white shadow-lg flex flex-col justify-between">
+                <div>
+                  <div className="bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center mb-4">
+                    <Calendar className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-xl font-serif font-bold mb-2">Schedule a Date</h3>
+                  <p className="text-rose-100 text-sm mb-6">
+                    Surprise your girlfriend or boyfriend with a romantic dinner, cozy movie night, or adventure!
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDateModal(true)}
+                  className="w-full bg-white text-rose-600 hover:bg-rose-50 py-3 rounded-2xl font-bold shadow-md transition-all flex items-center justify-center space-x-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Propose New Date</span>
+                </button>
+              </div>
+
+              {/* Next Milestone */}
+              <div className="bg-white/80 backdrop-blur-md border border-rose-100 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="bg-amber-100 p-3 rounded-2xl text-amber-600">
+                      <Flame className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs bg-amber-50 text-amber-700 font-semibold px-2.5 py-1 rounded-full border border-amber-200">
+                      Milestone
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-serif font-bold text-slate-800 mb-1">Upcoming Goal</h3>
+                  <p className="text-slate-500 text-xs mb-4">Milestones based on total days together</p>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-xs font-semibold text-slate-700">
+                      <span>100 Days Goal</span>
+                      <span>{Math.min(100, Math.round((timeTogether.totalDays / 100) * 100))}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                      <div 
+                        className="bg-gradient-to-r from-amber-400 to-rose-500 h-2.5 rounded-full transition-all duration-500" 
+                        style={{ width: `${Math.min(100, (timeTogether.totalDays / 100) * 100)}%` }}
+                      ></div>
+                    </div>
+                    <p className="text-xs text-slate-600">
+                      {timeTogether.totalDays >= 100 
+                        ? "🎉 You achieved 100 days together!" 
+                        : `${100 - timeTogether.totalDays} days remaining to reach 100 days!`}
+                    </p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={() => setActiveTab('timeline')}
+                  className="mt-6 w-full text-rose-600 hover:text-rose-700 text-xs font-semibold flex items-center justify-center space-x-1 py-2 rounded-xl bg-rose-50"
+                >
+                  <span>View Timeline Milestones</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Upcoming Scheduled Dates */}
+              <div className="bg-white/80 backdrop-blur-md border border-rose-100 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="bg-rose-100 p-3 rounded-2xl text-rose-600">
+                      <Bell className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs bg-rose-100 text-rose-700 font-semibold px-2.5 py-1 rounded-full">
+                      {scheduledDates.length} Planned
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-serif font-bold text-slate-800 mb-2">Next Date Night</h3>
+                  
+                  {scheduledDates.length > 0 ? (
+                    <div className="bg-rose-50/60 rounded-2xl p-3 border border-rose-100 space-y-1">
+                      <div className="font-bold text-slate-800 text-sm">{scheduledDates[0].title}</div>
+                      <div className="text-xs text-rose-600 flex items-center space-x-1">
+                        <Clock className="w-3 h-3" />
+                        <span>{new Date(scheduledDates[0].date).toLocaleString()}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 flex items-center space-x-1">
+                        <MapPin className="w-3 h-3" />
+                        <span>{scheduledDates[0].location || 'Surprise Location'}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-500 text-sm italic">No dates planned yet. Surprise your lover!</p>
+                  )}
+                </div>
+
+                <button 
+                  onClick={() => setActiveTab('dates')}
+                  className="mt-6 w-full text-rose-600 hover:text-rose-700 text-xs font-semibold flex items-center justify-center space-x-1 py-2 rounded-xl bg-rose-50"
+                >
+                  <span>View Date Schedule</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+            </div>
+
+            {/* RECENT MEMORIES HIGHLIGHT */}
+            <section className="bg-white/80 backdrop-blur-md rounded-3xl p-6 border border-rose-100 shadow-sm">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-xl font-serif font-bold text-slate-800">Favorite Memories</h2>
+                  <p className="text-xs text-slate-500">Your most cherished moments together</p>
+                </div>
+                <button
+                  onClick={() => setShowMemoryModal(true)}
+                  className="bg-rose-500 hover:bg-rose-600 text-white px-4 py-2 rounded-xl text-xs font-semibold shadow flex items-center space-x-1"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Memory</span>
+                </button>
+              </div>
+
+              {memories.length === 0 ? (
+                <div className="text-center py-10 bg-rose-50/30 rounded-2xl border border-dashed border-rose-200">
+                  <Camera className="w-10 h-10 text-rose-300 mx-auto mb-2" />
+                  <p className="text-slate-600 text-sm font-medium">No memories added yet!</p>
+                  <p className="text-slate-400 text-xs mt-1">Upload pictures and stories to keep them forever.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {memories.slice(0, 3).map((mem) => (
+                    <MemoryCard key={mem.id} memory={mem} coupleId={userProfile?.coupleId} />
+                  ))}
+                </div>
+              )}
+            </section>
+
+          </div>
+        )}
+
+        {}
+        {activeTab === 'memories' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-rose-100 shadow-sm">
+              <div>
+                <h1 className="text-2xl font-serif font-bold text-slate-800">Memory Vault</h1>
+                <p className="text-slate-500 text-sm">Photos and stories from your magical journey</p>
+              </div>
+              <button
+                onClick={() => setShowMemoryModal(true)}
+                className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md flex items-center justify-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add New Memory</span>
+              </button>
+            </div>
+
+            {memories.length === 0 ? (
+              <div className="text-center py-16 bg-white/80 rounded-3xl border border-dashed border-rose-200 p-8">
+                <Camera className="w-16 h-16 text-rose-300 mx-auto mb-3 animate-bounce" />
+                <h3 className="text-lg font-serif font-bold text-slate-700">Your Memory Book is Empty</h3>
+                <p className="text-slate-500 text-sm max-w-sm mx-auto mt-1 mb-6">
+                  Start documenting your favorite moments, dates, trips, and everyday sweet gestures!
+                </p>
+                <button
+                  onClick={() => setShowMemoryModal(true)}
+                  className="bg-rose-500 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow"
+                >
+                  Create First Memory
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {memories.map((mem) => (
+                  <MemoryCard key={mem.id} memory={mem} coupleId={userProfile?.coupleId} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {}
+        {activeTab === 'timeline' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-rose-100 shadow-sm">
+              <div>
+                <h1 className="text-2xl font-serif font-bold text-slate-800">Relationship Timeline</h1>
+                <p className="text-slate-500 text-sm">Key milestones and landmark moments in your story</p>
+              </div>
+              <button
+                onClick={() => setShowTimelineModal(true)}
+                className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md flex items-center justify-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Milestone</span>
+              </button>
+            </div>
+
+            {/* Visual Vertical Timeline */}
+            <div className="relative border-l-2 border-rose-200 ml-4 sm:ml-8 pl-6 sm:pl-10 space-y-8 py-4">
+              {timelineEvents.length === 0 ? (
+                <p className="text-slate-500 text-sm italic">No timeline milestones added yet. Add your First Date, First Kiss, etc.!</p>
+              ) : (
+                timelineEvents.map((evt, idx) => (
+                  <div key={evt.id} className="relative group">
+                    {/* Circle icon marker */}
+                    <div className="absolute -left-[31px] sm:-left-[47px] top-1 bg-rose-500 text-white p-2 rounded-full ring-4 ring-rose-100 shadow-md">
+                      <Heart className="w-4 h-4 fill-white" />
+                    </div>
+
+                    <div className="bg-white/90 backdrop-blur-md p-6 rounded-3xl border border-rose-100 shadow-sm hover:shadow-md transition-all">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <span className="text-xs font-bold bg-rose-100 text-rose-700 px-3 py-1 rounded-full">
+                          {new Date(evt.date).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </span>
+                        <button
+                          onClick={async () => {
+                            if (!userProfile?.coupleId) return;
+                            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'timeline', evt.id));
+                          }}
+                          className="text-slate-400 hover:text-red-500 p-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <h3 className="text-xl font-serif font-bold text-slate-800">{evt.title}</h3>
+                      <p className="text-slate-600 text-sm mt-2 whitespace-pre-line">{evt.description}</p>
+
+                      {evt.imageUrl && (
+                        <img 
+                          src={evt.imageUrl} 
+                          alt={evt.title} 
+                          className="mt-4 rounded-2xl w-full max-h-64 object-cover shadow-sm" 
+                        />
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {}
+        {activeTab === 'dates' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-rose-100 shadow-sm">
+              <div>
+                <h1 className="text-2xl font-serif font-bold text-slate-800">Date Planner & RSVP</h1>
+                <p className="text-slate-500 text-sm">Schedule upcoming dates and confirm plans together</p>
+              </div>
+              <button
+                onClick={() => setShowDateModal(true)}
+                className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md flex items-center justify-center space-x-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Schedule a Date</span>
+              </button>
+            </div>
+
+            {scheduledDates.length === 0 ? (
+              <div className="text-center py-16 bg-white/80 rounded-3xl border border-dashed border-rose-200 p-8">
+                <Calendar className="w-16 h-16 text-rose-300 mx-auto mb-3" />
+                <h3 className="text-lg font-serif font-bold text-slate-700">No Scheduled Dates</h3>
+                <p className="text-slate-500 text-sm max-w-sm mx-auto mt-1 mb-6">
+                  Surprise your partner by scheduling a special date night or adventure!
+                </p>
+                <button
+                  onClick={() => setShowDateModal(true)}
+                  className="bg-rose-500 text-white px-6 py-2.5 rounded-xl font-semibold text-sm shadow"
+                >
+                  Schedule Date Now
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {scheduledDates.map((dateItem) => (
+                  <DateCard key={dateItem.id} dateItem={dateItem} user={user} userProfile={userProfile} />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {}
+        {activeTab === 'settings' && (
+          <div className="max-w-2xl mx-auto space-y-6">
+            
+            {/* User Profile Card */}
+            <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 border border-rose-100 shadow-sm">
+              <h2 className="text-xl font-serif font-bold text-slate-800 mb-4 flex items-center space-x-2">
+                <User className="w-5 h-5 text-rose-500" />
+                <span>Your Profile Details</span>
+              </h2>
+
+              <form onSubmit={handleUpdateProfile} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Your Name / Nickname</label>
+                  <input
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    placeholder="e.g. Alex"
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-400 text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Role in Relationship</label>
+                  <select
+                    value={roleInput}
+                    onChange={(e) => setRoleInput(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-400 text-sm"
+                  >
+                    <option value="Boyfriend">Boyfriend</option>
+                    <option value="Girlfriend">Girlfriend</option>
+                    <option value="Partner">Partner</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 uppercase mb-1">Anniversary Date & Time</label>
+                  <input
+                    type="datetime-local"
+                    value={anniversaryInput}
+                    onChange={(e) => setAnniversaryInput(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-rose-400 text-sm"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full bg-rose-500 hover:bg-rose-600 text-white font-semibold py-2.5 rounded-xl text-sm shadow transition-all"
+                >
+                  Save Profile & Anniversary
+                </button>
+              </form>
+            </div>
+
+            {/* Partner Connection Code Card */}
+            <div className="bg-white/80 backdrop-blur-md rounded-3xl p-6 border border-rose-100 shadow-sm">
+              <h2 className="text-xl font-serif font-bold text-slate-800 mb-2 flex items-center space-x-2">
+                <UserCheck className="w-5 h-5 text-rose-500" />
+                <span>Partner Connection</span>
+              </h2>
+
+              <div className="bg-rose-50/70 rounded-2xl p-4 mb-6 border border-rose-100">
+                <p className="text-xs text-slate-600 mb-2 font-medium">Your Unique Partner Code:</p>
+                <div className="flex items-center space-x-2">
+                  <span className="text-2xl font-mono font-bold tracking-widest text-rose-600 bg-white px-4 py-2 rounded-xl border border-rose-200 flex-1 text-center">
+                    {userProfile?.partnerCode || '...'}
+                  </span>
+                  <button
+                    onClick={copyPartnerCode}
+                    className="bg-rose-500 hover:bg-rose-600 text-white p-3 rounded-xl transition-all shadow-sm"
+                    title="Copy Code"
+                  >
+                    {copiedCode ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-400 mt-2">Give this code to your girlfriend or boyfriend so they can link with you!</p>
+              </div>
+
+              {!userProfile?.coupleId ? (
+                <form onSubmit={handleConnectPartner} className="space-y-3">
+                  <label className="block text-xs font-semibold text-slate-600 uppercase">Enter Partner's Code</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={partnerCodeInput}
+                      onChange={(e) => setPartnerCodeInput(e.target.value)}
+                      placeholder="e.g. A1B2C3"
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 uppercase font-mono text-sm focus:outline-none focus:ring-2 focus:ring-rose-400"
+                    />
+                    <button
+                      type="submit"
+                      className="bg-rose-500 hover:bg-rose-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow transition-all"
+                    >
+                      Connect
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-2xl text-center">
+                  <p className="font-semibold text-sm"> Connected to Partner!</p>
+                  <p className="text-xs text-emerald-600 mt-0.5">Couple ID: {userProfile.coupleId}</p>
+                </div>
+              )}
+            </div>
+
+          </div>
+        )}
+
+      </main>
+
+      {}
+      
+      {/* 1. Add Memory Modal */}
+      {showMemoryModal && (
+        <MemoryModal 
+          onClose={() => setShowMemoryModal(false)} 
+          coupleId={userProfile?.coupleId} 
+          userId={user?.uid} 
+        />
+      )}
+
+      {/* 2. Add Timeline Event Modal */}
+      {showTimelineModal && (
+        <TimelineModal 
+          onClose={() => setShowTimelineModal(false)} 
+          coupleId={userProfile?.coupleId} 
+        />
+      )}
+
+      {/* 3. Add Scheduled Date Modal */}
+      {showDateModal && (
+        <ScheduleDateModal 
+          onClose={() => setShowDateModal(false)} 
+          coupleId={userProfile?.coupleId} 
+          userName={userProfile?.name || 'Partner'} 
+        />
+      )}
+
+    </div>
+  );
+}
+
+function MemoryCard({ memory, coupleId }) {
+  const [likes, setLikes] = useState(memory.likes || 0);
+
+  const handleLike = async () => {
+    if (!coupleId) return;
+    const newLikes = likes + 1;
+    setLikes(newLikes);
+    const memRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories', memory.id);
+    await updateDoc(memRef, { likes: newLikes });
+  };
+
+  const handleDelete = async () => {
+    if (!coupleId) return;
+    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories', memory.id));
+  };
+
+  return (
+    <div className="bg-white/90 backdrop-blur-md rounded-3xl overflow-hidden border border-rose-100 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+      <div>
+        {memory.imageUrl ? (
+          <img src={memory.imageUrl} alt={memory.title} className="w-full h-48 object-cover" />
+        ) : (
+          <div className="w-full h-32 bg-rose-100 flex items-center justify-center text-rose-300">
+            <Camera className="w-8 h-8" />
+          </div>
+        )}
+
+        <div className="p-5">
+          <div className="flex items-center justify-between text-xs text-rose-500 font-semibold mb-1">
+            <span>{new Date(memory.date).toLocaleDateString()}</span>
+            {memory.tag && <span className="bg-rose-50 px-2 py-0.5 rounded-full border border-rose-100">{memory.tag}</span>}
+          </div>
+
+          <h3 className="text-lg font-serif font-bold text-slate-800">{memory.title}</h3>
+          <p className="text-slate-600 text-xs mt-2 leading-relaxed">{memory.description}</p>
+        </div>
+      </div>
+
+      <div className="p-4 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
+        <button 
+          onClick={handleLike}
+          className="flex items-center space-x-1 text-xs text-rose-600 hover:text-rose-700 font-semibold bg-rose-50 px-3 py-1.5 rounded-xl"
+        >
+          <Heart className="w-3.5 h-3.5 fill-rose-500" />
+          <span>{likes} Loves</span>
+        </button>
+
+        <button 
+          onClick={handleDelete}
+          className="text-slate-400 hover:text-red-500 p-1 rounded-lg"
+          title="Delete memory"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function DateCard({ dateItem, user, userProfile }) {
+  const handleRSVP = async (status) => {
+    if (!userProfile?.coupleId) return;
+    const dateRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'dates', dateItem.id);
+    await updateDoc(dateRef, { status });
+  };
+
+  const getCategoryBadge = (cat) => {
+    switch (cat) {
+      case 'Romantic Dinner': return 'bg-pink-100 text-pink-700';
+      case 'Movie Night': return 'bg-purple-100 text-purple-700';
+      case 'Outdoor Adventure': return 'bg-emerald-100 text-emerald-700';
+      case 'Surprise': return 'bg-amber-100 text-amber-700';
+      default: return 'bg-rose-100 text-rose-700';
+    }
+  };
+
+  return (
+    <div className="bg-white/90 backdrop-blur-md rounded-3xl p-6 border border-rose-100 shadow-sm flex flex-col justify-between">
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${getCategoryBadge(dateItem.category)}`}>
+            {dateItem.category || 'Date Night'}
+          </span>
+          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+            dateItem.status === 'Accepted' 
+              ? 'bg-emerald-100 text-emerald-700' 
+              : dateItem.status === 'Declined' 
+              ? 'bg-red-100 text-red-700' 
+              : 'bg-amber-100 text-amber-700'
+          }`}>
+            {dateItem.status || 'Pending RSVP'}
+          </span>
+        </div>
+
+        <h3 className="text-xl font-serif font-bold text-slate-800 mb-2">{dateItem.title}</h3>
+        
+        <div className="space-y-1.5 text-xs text-slate-600 mb-4">
+          <div className="flex items-center space-x-2">
+            <Clock className="w-3.5 h-3.5 text-rose-500" />
+            <span>{new Date(dateItem.date).toLocaleString()}</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <MapPin className="w-3.5 h-3.5 text-rose-500" />
+            <span>{dateItem.location || 'Location TBD'}</span>
+          </div>
+          <div className="flex items-center space-x-2 text-slate-400">
+            <User className="w-3.5 h-3.5" />
+            <span>Proposed by {dateItem.createdBy}</span>
+          </div>
+        </div>
+
+        <p className="text-slate-600 text-xs leading-relaxed bg-rose-50/50 p-3 rounded-2xl border border-rose-100">
+          {dateItem.description || 'No description provided.'}
+        </p>
+      </div>
+
+      {/* RSVP Action Buttons */}
+      <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
+        <div className="flex space-x-2">
+          <button
+            onClick={() => handleRSVP('Accepted')}
+            className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1 shadow-sm"
+          >
+            <CheckCircle className="w-3.5 h-3.5" />
+            <span>Accept</span>
+          </button>
+          <button
+            onClick={() => handleRSVP('Declined')}
+            className="bg-rose-100 hover:bg-rose-200 text-rose-700 px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center space-x-1"
+          >
+            <XCircle className="w-3.5 h-3.5" />
+            <span>Decline</span>
+          </button>
+        </div>
+
+        <button 
+          onClick={async () => {
+            if (!userProfile?.coupleId) return;
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'dates', dateItem.id));
+          }}
+          className="text-slate-400 hover:text-red-500 p-1"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MemoryModal({ onClose, coupleId, userId }) {
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [tag, setTag] = useState('Vacation');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!coupleId || !title) return;
+
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories'), {
+      title,
+      date,
+      description,
+      imageUrl,
+      tag,
+      likes: 0,
+      createdAt: new Date().toISOString()
+    });
+
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+        <h3 className="text-xl font-serif font-bold text-slate-800">Add Favorite Memory</h3>
+
+        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Memory Title</label>
+            <input 
+              type="text" 
+              required 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Sunset Walk on the Beach" 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Date</label>
+            <input 
+              type="date" 
+              required 
+              value={date} 
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Tag / Category</label>
+            <select 
+              value={tag} 
+              onChange={(e) => setTag(e.target.value)}
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            >
+              <option value="Vacation">Vacation</option>
+              <option value="Anniversary">Anniversary</option>
+              <option value="Date Night">Date Night</option>
+              <option value="Cozy Day">Cozy Day</option>
+              <option value="Surprise">Surprise</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Photo Image URL</label>
+            <input 
+              type="url" 
+              value={imageUrl} 
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://images.unsplash.com/..." 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Story / Details</label>
+            <textarea 
+              rows="3" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Write what made this day so special..." 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            ></textarea>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-2">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="px-5 py-2 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 shadow"
+            >
+              Save Memory
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function TimelineModal({ onClose, coupleId }) {
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!coupleId || !title) return;
+
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'timeline'), {
+      title,
+      date,
+      description,
+      imageUrl,
+      createdAt: new Date().toISOString()
+    });
+
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+        <h3 className="text-xl font-serif font-bold text-slate-800">Add Timeline Milestone</h3>
+
+        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Milestone Title</label>
+            <input 
+              type="text" 
+              required 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. First 'I Love You', Moved In Together" 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Date</label>
+            <input 
+              type="date" 
+              required 
+              value={date} 
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Image URL (Optional)</label>
+            <input 
+              type="url" 
+              value={imageUrl} 
+              onChange={(e) => setImageUrl(e.target.value)}
+              placeholder="https://..." 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Description</label>
+            <textarea 
+              rows="3" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Details about this landmark moment..." 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            ></textarea>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-2">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="px-5 py-2 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 shadow"
+            >
+              Save Milestone
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function ScheduleDateModal({ onClose, coupleId, userName }) {
+  const [title, setTitle] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
+  const [location, setLocation] = useState('');
+  const [category, setCategory] = useState('Romantic Dinner');
+  const [description, setDescription] = useState('');
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!coupleId || !title) return;
+
+    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'dates'), {
+      title,
+      date,
+      location,
+      category,
+      description,
+      status: 'Pending RSVP',
+      createdBy: userName,
+      createdAt: new Date().toISOString()
+    });
+
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+        <h3 className="text-xl font-serif font-bold text-slate-800">Propose a Date Night</h3>
+
+        <form onSubmit={handleSubmit} className="space-y-3 text-sm">
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Date Plan Title</label>
+            <input 
+              type="text" 
+              required 
+              value={title} 
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Italian Candlelight Dinner" 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Date & Time</label>
+            <input 
+              type="datetime-local" 
+              required 
+              value={date} 
+              onChange={(e) => setDate(e.target.value)}
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Category</label>
+            <select 
+              value={category} 
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            >
+              <option value="Romantic Dinner">Romantic Dinner</option>
+              <option value="Movie Night">Movie Night</option>
+              <option value="Outdoor Adventure">Outdoor Adventure</option>
+              <option value="Surprise">Surprise Date</option>
+              <option value="Cozy Home Date">Cozy Home Date</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Location</label>
+            <input 
+              type="text" 
+              value={location} 
+              onChange={(e) => setLocation(e.target.value)}
+              placeholder="e.g. Downtown Bistro / My Place" 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-600 mb-1">Notes / Plan Details</label>
+            <textarea 
+              rows="3" 
+              value={description} 
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Dress code, secret plans, or instructions..." 
+              className="w-full px-3 py-2 border rounded-xl focus:ring-2 focus:ring-rose-400 outline-none"
+            ></textarea>
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-2">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              className="px-5 py-2 rounded-xl bg-rose-500 text-white font-semibold hover:bg-rose-600 shadow"
+            >
+              Send Date Invitation
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
