@@ -1,1224 +1,583 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Our Love Journey - Relationship Tracker</title>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            rose: {
-              50: '#fff1f2',
-              100: '#ffe4e6',
-              200: '#fecdd3',
-              300: '#fda4af',
-              400: '#fb7185',
-              500: '#f43f5e',
-              600: '#e11d48',
-            },
-            pastel: {
-              pink: '#fff0f3',
-              card: 'rgba(255, 255, 255, 0.88)',
-              border: 'rgba(251, 113, 133, 0.3)',
-              accent: '#ff85a2',
-              shadow: 'rgba(244, 63, 94, 0.12)'
-            }
-          },
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-            serif: ['Playfair Display', 'serif']
-          }
-        }
-      }
-    }
-  </script>
-
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
-
-  <style>
-    body {
-      background-color: #fff0f3;
-      color: #4a2c35;
-      font-family: 'Inter', sans-serif;
-      overflow-x: hidden;
-    }
-    canvas#hearts-canvas {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none;
-      z-index: 0;
-    }
-    .glass-panel {
-      background: rgba(255, 255, 255, 0.88);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(251, 113, 133, 0.28);
-      box-shadow: 0 10px 30px -5px rgba(244, 63, 94, 0.12);
-    }
-    .glass-input {
-      background: rgba(255, 255, 255, 0.95);
-      border: 1px solid rgba(251, 113, 133, 0.4);
-      color: #4a2c35;
-    }
-    .glass-input:focus {
-      border-color: #f43f5e;
-      outline: none;
-      box-shadow: 0 0 10px rgba(244, 63, 94, 0.2);
-    }
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-      background: rgba(255, 240, 245, 0.8);
-    }
-    ::-webkit-scrollbar-thumb {
-      background: rgba(251, 113, 133, 0.5);
-      border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(244, 63, 94, 0.8);
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#fff0f3" />
+<title>Our Love Journey - Relationship Tracker</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+tailwind.config={theme:{extend:{colors:{rose:{50:'#fff1f2',100:'#ffe4e6',200:'#fecdd3',300:'#fda4af',400:'#fb7185',500:'#f43f5e',600:'#e11d48'}},fontFamily:{sans:['Inter','sans-serif'],serif:['Playfair Display','serif']}}}}
+</script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+body{background:#fff0f3;color:#4a2c35;font-family:'Inter',sans-serif;overflow-x:hidden;min-height:100dvh;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);-webkit-text-size-adjust:100%}
+#hearts-canvas{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:0}
+.hidden{display:none!important}
+.glass-panel{background:rgba(255,255,255,.88);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(251,113,133,.28);box-shadow:0 10px 30px -5px rgba(244,63,94,.12)}
+.field{width:100%;padding:.55rem .75rem;border-radius:.75rem;font-size:.875rem;background:rgba(255,255,255,.95);border:1px solid rgba(251,113,133,.4);color:#4a2c35}
+.field:focus{border-color:#f43f5e;outline:none;box-shadow:0 0 10px rgba(244,63,94,.2)}
+.lbl{display:block;font-size:.75rem;font-weight:600;color:#9f1239;margin-bottom:.25rem}
+.btn{display:flex;align-items:center;justify-content:center;gap:.5rem;padding:.6rem 1rem;border-radius:.75rem;font-size:.75rem;font-weight:600;transition:.15s;white-space:nowrap}
+.btn:disabled{opacity:.6}
+.btn-p{background:#f43f5e;color:#fff;box-shadow:0 4px 10px rgba(244,63,94,.25)}.btn-p:hover{background:#e11d48}
+.btn-o{background:#fff;color:#e11d48;border:1px solid #fda4af}.btn-o:hover{background:#fff1f2}
+.btn-g{background:#10b981;color:#fff}.btn-r{background:#fb7185;color:#fff}
+.chip{display:inline-flex;align-items:center;gap:.25rem;font-size:.75rem;font-weight:500;color:#e11d48;background:#ffe4e6;padding:.35rem .7rem;border-radius:9999px;cursor:pointer}
+.avatar{width:5rem;height:5rem;border-radius:9999px;background:#ffe4e6;border:4px solid #fda4af;display:flex;align-items:center;justify-content:center;margin:0 auto;font:600 1.875rem 'Playfair Display',serif;color:#f43f5e;overflow:hidden}
+.sec-head{display:flex;justify-content:space-between;align-items:center;gap:.75rem}
+.sec-head .btn{flex-shrink:0}
+.nav-tab{display:flex;align-items:center;gap:.5rem;border-radius:.75rem;font-weight:600;color:#475569;transition:.15s}
+.nav-tab.active{color:#e11d48;background:#ffe4e6;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.modal{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(76,5,25,.4);backdrop-filter:blur(4px)}
+.modal-card{width:100%;max-width:28rem;padding:1.25rem;border-radius:1.5rem;max-height:90dvh;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#modal-notify{z-index:90}
+header.top{padding-top:calc(.75rem + env(safe-area-inset-top))}
+#drawer{position:fixed;top:0;right:0;bottom:0;z-index:70;width:18rem;max-width:85vw;background:#fff5f7;border-left:1px solid #fecdd3;box-shadow:-10px 0 30px rgba(244,63,94,.15);display:flex;flex-direction:column;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);transform:translateX(105%);transition:transform .25s ease;visibility:hidden}
+#drawer.open{transform:none;visibility:visible}
+#drawer-overlay{position:fixed;inset:0;z-index:60;background:rgba(76,5,25,.4);backdrop-filter:blur(4px)}
+.desk-only{display:none}
+@media(min-width:768px){.desk-only{display:block}.mob-only{display:none!important}}
+@media(max-width:767px){#main-nav{display:none!important}}
+@media(min-width:640px){.avatar{width:6rem;height:6rem}}
+@media(max-width:640px){.field{font-size:16px}}
+@media(pointer:coarse){.btn,.field,.icon-btn{min-height:44px}.icon-btn{min-width:44px}}
+@media(prefers-reduced-motion:reduce){#drawer{transition:none}.animate-bounce,.animate-pulse{animation:none}}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:rgba(251,113,133,.5);border-radius:9999px}
+</style>
 </head>
-<body class="min-h-screen flex flex-col relative antialiased">
+<body class="flex flex-col relative antialiased">
+<canvas id="hearts-canvas"></canvas>
+<div id="boot-splash" class="fixed inset-0 z-[95] flex items-center justify-center bg-rose-50 text-5xl animate-pulse">💕</div>
 
-  <canvas id="hearts-canvas"></canvas>
-
-  <div class="relative z-10 flex flex-col min-h-screen">
-    <!-- Header -->
-    <header class="sticky top-0 z-40 glass-panel border-b border-rose-200/60 px-4 py-3 shadow-sm">
-      <div class="max-w-6xl mx-auto flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <div class="p-2 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center animate-bounce">
-            <i data-lucide="heart" class="w-6 h-6 fill-rose-500"></i>
-          </div>
-          <span class="font-serif text-xl sm:text-2xl font-bold text-rose-600 tracking-tight">
-            Our Love Story
-          </span>
-        </div>
-
-        <div id="nav-user-bar" class="hidden flex items-center space-x-4">
-          <div class="text-right hidden sm:block">
-            <div id="nav-user-name" class="text-sm font-semibold text-rose-900">Loading...</div>
-            <div id="nav-partner-status" class="text-xs text-rose-500">Checking connection...</div>
-          </div>
-          <button id="logout-btn" title="Sign Out" class="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-100/60 rounded-xl transition">
-            <i data-lucide="log-out" class="w-5 h-5"></i>
-          </button>
-        </div>
+<div class="relative z-10 flex flex-col min-h-[100dvh]">
+  <header class="top sticky top-0 z-40 glass-panel border-b border-rose-200/60 px-4 pb-3">
+    <div class="max-w-6xl mx-auto flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="p-2 bg-rose-100 text-rose-500 rounded-full animate-bounce"><i data-lucide="heart" class="w-6 h-6 fill-rose-500"></i></div>
+        <span class="font-serif text-xl sm:text-2xl font-bold text-rose-600 tracking-tight">Our Love Story</span>
       </div>
-    </header>
-
-    <!-- Navigation Tabs -->
-    <nav id="main-nav" class="hidden glass-panel border-b border-rose-200/40 px-2 py-2">
-      <div class="max-w-4xl mx-auto flex justify-around sm:justify-center sm:space-x-8 text-xs sm:text-sm font-semibold">
-        <button data-tab="tab-counter" class="nav-tab active flex items-center space-x-2 px-3 py-2 rounded-xl text-rose-600 bg-rose-100 transition shadow-sm">
-          <i data-lucide="clock" class="w-4 h-4"></i>
-          <span>Counter</span>
-        </button>
-        <button data-tab="tab-timeline" class="nav-tab flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-600 hover:text-rose-600 transition">
-          <i data-lucide="git-commit" class="w-4 h-4"></i>
-          <span>Timeline</span>
-        </button>
-        <button data-tab="tab-memories" class="nav-tab flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-600 hover:text-rose-600 transition">
-          <i data-lucide="image" class="w-4 h-4"></i>
-          <span>Memories</span>
-        </button>
-        <button data-tab="tab-dates" class="nav-tab flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-600 hover:text-rose-600 transition">
-          <i data-lucide="calendar" class="w-4 h-4"></i>
-          <span>Dates</span>
-        </button>
-        <button data-tab="tab-settings" class="nav-tab flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-600 hover:text-rose-600 transition">
-          <i data-lucide="users" class="w-4 h-4"></i>
-          <span>Partner</span>
-        </button>
-      </div>
-    </nav>
-
-    <main class="flex-grow max-w-5xl w-full mx-auto p-4 sm:p-6">
-
-      <div id="auth-view" class="max-w-md mx-auto my-8 sm:my-12 glass-panel p-6 sm:p-8 rounded-3xl shadow-xl">
-        <div class="text-center mb-6">
-          <div class="w-16 h-16 mx-auto mb-3 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center">
-            <i data-lucide="sparkles" class="w-8 h-8"></i>
-          </div>
-          <h2 class="text-2xl font-serif font-bold text-rose-800">Welcome Lovers</h2>
-          <p class="text-xs text-rose-600/80 mt-1">Sign in or create your account using a Username & Password</p>
+      <div id="nav-user-bar" class="hidden flex items-center gap-3">
+        <div class="desk-only text-right">
+          <div id="nav-user-name" class="text-sm font-semibold text-rose-900">Loading...</div>
+          <div id="nav-partner-status" class="text-xs text-rose-500">Checking connection...</div>
         </div>
-
-        <form id="auth-form" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-rose-800 mb-1">Username</label>
-            <div class="relative">
-              <input type="text" id="auth-username" required placeholder="e.g. Alex123" class="w-full px-4 py-2.5 rounded-xl glass-input text-sm pl-10" autocomplete="username">
-              <i data-lucide="user" class="w-4 h-4 text-rose-400 absolute left-3.5 top-3"></i>
-            </div>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold uppercase tracking-wider text-rose-800 mb-1">Password</label>
-            <div class="relative">
-              <input type="password" id="auth-password" required placeholder="••••••••" class="w-full px-4 py-2.5 rounded-xl glass-input text-sm pl-10" autocomplete="current-password">
-              <i data-lucide="key-round" class="w-4 h-4 text-rose-400 absolute left-3.5 top-3"></i>
-            </div>
-          </div>
-
-          <div id="auth-error" class="hidden text-xs text-rose-700 bg-rose-100/90 p-3 rounded-xl border border-rose-300 font-medium"></div>
-
-          <div class="flex space-x-3 pt-2">
-            <button type="submit" id="auth-signin-btn" class="flex-1 py-3 bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white font-semibold rounded-xl shadow-lg shadow-rose-300 transition transform active:scale-95 text-sm flex justify-center items-center">
-              <span>Sign In</span>
-            </button>
-            <button type="button" id="auth-signup-btn" class="flex-1 py-3 bg-white/80 hover:bg-white text-rose-600 border border-rose-300 font-semibold rounded-xl shadow-sm transition transform active:scale-95 text-sm flex justify-center items-center">
-              <span>Create Account</span>
-            </button>
-          </div>
-        </form>
+        <button id="logout-btn" title="Sign Out" aria-label="Sign Out" class="icon-btn desk-only p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-100/60 rounded-xl"><i data-lucide="log-out" class="w-5 h-5"></i></button>
+        <button id="menu-btn" aria-label="Open menu" aria-expanded="false" class="icon-btn mob-only p-2 flex items-center justify-center text-rose-600 bg-rose-100 rounded-xl"><i data-lucide="menu" class="w-6 h-6"></i></button>
       </div>
+    </div>
+  </header>
 
-      <div id="app-content" class="hidden space-y-6">
+  <nav id="main-nav" class="hidden glass-panel border-b border-rose-200/40 px-2 py-2">
+    <div id="main-nav-inner" class="max-w-4xl mx-auto flex justify-center gap-6 text-sm"></div>
+  </nav>
 
-        <!-- TAB 1: COUNTER & PROFILES -->
-        <section id="tab-counter" class="tab-content block space-y-6">
-          <div class="glass-panel p-6 sm:p-8 rounded-3xl text-center relative overflow-hidden">
-            <!-- Profile Photo Avatars -->
-            <div class="flex items-center justify-center space-x-4 sm:space-x-12 my-2">
-              
-              <!-- User Profile Picture -->
-              <div class="text-center group relative">
-                <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-rose-100 border-4 border-rose-300 flex items-center justify-center mx-auto text-3xl font-serif text-rose-500 shadow-md overflow-hidden" id="card-user-avatar-container">
-                  <img id="card-user-img" src="" class="hidden w-full h-full object-cover" />
-                  <span id="card-user-avatar-text">Y</span>
-                </div>
-                <label for="user-photo-upload" class="mt-2 inline-flex items-center space-x-1 text-xs text-rose-600 bg-rose-100 hover:bg-rose-200 px-2.5 py-1 rounded-full cursor-pointer transition font-medium">
-                  <i data-lucide="camera" class="w-3 h-3"></i>
-                  <span>Change Photo</span>
-                </label>
-                <input type="file" id="user-photo-upload" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif, image/bmp, image/*" class="hidden">
-                <div id="card-user-name" class="mt-1 text-sm sm:text-base font-bold text-rose-900">You</div>
-              </div>
+  <main class="flex-grow max-w-5xl w-full mx-auto p-4 sm:p-6">
 
-              <!-- Animated Heart Icon -->
-              <div class="flex flex-col items-center">
-                <div class="p-3 bg-rose-500 text-white rounded-full shadow-lg shadow-rose-300 animate-pulse">
-                  <i data-lucide="heart" class="w-6 h-6 sm:w-8 sm:h-8 fill-white"></i>
-                </div>
-                <span class="text-[10px] text-rose-500 uppercase tracking-widest mt-1.5 font-bold">In Love</span>
-              </div>
-
-              <!-- Partner Profile Picture -->
-              <div class="text-center group relative">
-                <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-rose-100 border-4 border-rose-300 flex items-center justify-center mx-auto text-3xl font-serif text-rose-500 shadow-md overflow-hidden" id="card-partner-avatar-container">
-                  <img id="card-partner-img" src="" class="hidden w-full h-full object-cover" />
-                  <span id="card-partner-avatar-text">P</span>
-                </div>
-                <div class="mt-2 text-xs text-rose-400 font-medium">Partner</div>
-                <div id="card-partner-name" class="mt-1 text-sm sm:text-base font-bold text-rose-900">Partner</div>
-              </div>
-
-            </div>
-
-            <!-- Anniversary Start Date Setter -->
-            <div class="mt-6 inline-flex flex-col items-center bg-rose-50/70 p-4 rounded-2xl border border-rose-200/60">
-              <span class="text-xs text-rose-600 uppercase tracking-wider font-semibold mb-2">Our Relationship Started On</span>
-              <div class="flex items-center space-x-2">
-                <input type="date" id="start-date-input" class="glass-input px-3 py-1.5 rounded-xl text-sm text-center font-medium">
-                <button id="save-start-date-btn" class="px-4 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold transition shadow-md shadow-rose-300">
-                  Update Date
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Live Counter Grid -->
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
-            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
-              <div id="cnt-years" class="text-3xl sm:text-4xl font-bold text-rose-600 font-serif">0</div>
-              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Years</div>
-            </div>
-            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
-              <div id="cnt-months" class="text-3xl sm:text-4xl font-bold text-rose-500 font-serif">0</div>
-              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Months</div>
-            </div>
-            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
-              <div id="cnt-days" class="text-3xl sm:text-4xl font-bold text-rose-600 font-serif">0</div>
-              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Days</div>
-            </div>
-            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
-              <div id="cnt-hours" class="text-3xl sm:text-4xl font-bold text-pink-600 font-serif">0</div>
-              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Hours</div>
-            </div>
-            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
-              <div id="cnt-minutes" class="text-3xl sm:text-4xl font-bold text-pink-500 font-serif">0</div>
-              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Minutes</div>
-            </div>
-            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
-              <div id="cnt-seconds" class="text-3xl sm:text-4xl font-bold text-rose-600 font-serif">0</div>
-              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Seconds</div>
-            </div>
-          </div>
-
-          <!-- Total Days Banner -->
-          <div class="glass-panel p-4 rounded-2xl text-center">
-            <span class="text-sm font-medium text-rose-800">Total togetherness: </span>
-            <span id="cnt-total-days" class="text-lg font-bold text-rose-600">0</span>
-            <span class="text-sm font-medium text-rose-800"> wonderful days! 💕</span>
-          </div>
-        </section>
-
-        <!-- TAB 2: TIMELINE -->
-        <section id="tab-timeline" class="tab-content hidden space-y-6">
-          <div class="flex justify-between items-center">
-            <div>
-              <h3 class="text-xl font-serif font-bold text-rose-800">Our Milestones</h3>
-              <p class="text-xs text-rose-500">Important dates and milestones in our relationship</p>
-            </div>
-            <button id="open-timeline-modal" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition shadow-md shadow-rose-200">
-              <i data-lucide="plus" class="w-4 h-4"></i>
-              <span>Add Event</span>
-            </button>
-          </div>
-
-          <div class="relative border-l-2 border-rose-300 ml-4 sm:ml-8 pl-6 space-y-6 py-2" id="timeline-list">
-            <div class="text-rose-400 text-sm italic">Loading timeline milestones...</div>
-          </div>
-        </section>
-
-        <!-- TAB 3: PHOTO MEMORIES -->
-        <section id="tab-memories" class="tab-content hidden space-y-6">
-          <div class="flex justify-between items-center">
-            <div>
-              <h3 class="text-xl font-serif font-bold text-rose-800">Photo Memories</h3>
-              <p class="text-xs text-rose-500">Upload photos of your favorite dates and moments together</p>
-            </div>
-            <button id="open-memory-modal" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition shadow-md shadow-rose-200">
-              <i data-lucide="camera" class="w-4 h-4"></i>
-              <span>Add Memory Photo</span>
-            </button>
-          </div>
-
-          <div id="memories-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            <div class="text-rose-400 text-sm italic col-span-full">Loading uploaded photo memories...</div>
-          </div>
-        </section>
-
-        <!-- TAB 4: DATE SCHEDULER -->
-        <section id="tab-dates" class="tab-content hidden space-y-6">
-          <div class="flex justify-between items-center">
-            <div>
-              <h3 class="text-xl font-serif font-bold text-rose-800">Date Night Scheduler</h3>
-              <p class="text-xs text-rose-500">Propose date ideas for your partner to accept or decline</p>
-            </div>
-            <button id="open-date-modal" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition shadow-md shadow-rose-200">
-              <i data-lucide="plus-circle" class="w-4 h-4"></i>
-              <span>Propose Date</span>
-            </button>
-          </div>
-
-          <div id="dates-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="text-rose-400 text-sm italic col-span-full">Loading proposed dates...</div>
-          </div>
-        </section>
-
-        <!-- TAB 5: PARTNER LINKING -->
-        <section id="tab-settings" class="tab-content hidden space-y-6 max-w-xl mx-auto">
-          <div class="glass-panel p-6 rounded-3xl space-y-6">
-            <h3 class="text-xl font-serif font-bold text-rose-800 flex items-center space-x-2">
-              <i data-lucide="user-plus" class="w-5 h-5 text-rose-500"></i>
-              <span>Connect With Your Partner</span>
-            </h3>
-
-            <div class="space-y-2">
-              <label class="block text-xs font-semibold uppercase tracking-wider text-rose-800">Your Connection Code</label>
-              <div class="flex items-center space-x-2">
-                <input type="text" id="my-link-code" readonly class="w-full glass-input px-4 py-2.5 rounded-xl text-sm font-mono text-rose-700 font-bold select-all">
-                <button id="copy-code-btn" class="px-4 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-semibold transition border border-rose-300 flex items-center space-x-1">
-                  <i data-lucide="copy" class="w-4 h-4"></i>
-                  <span>Copy</span>
-                </button>
-              </div>
-              <p class="text-[11px] text-rose-500">Share this code with your partner so they can link accounts with you!</p>
-            </div>
-
-            <hr class="border-rose-200">
-
-            <div class="space-y-3">
-              <label class="block text-xs font-semibold uppercase tracking-wider text-rose-800">Connect to Partner</label>
-              <div class="flex items-center space-x-2">
-                <input type="text" id="partner-code-input" placeholder="Paste partner's connection code..." class="w-full glass-input px-4 py-2.5 rounded-xl text-sm">
-                <button id="link-partner-btn" class="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold transition flex items-center space-x-1 shadow-md shadow-rose-200 whitespace-nowrap">
-                  <i data-lucide="link" class="w-4 h-4"></i>
-                  <span>Link Partner</span>
-                </button>
-              </div>
-            </div>
-
-            <div id="partner-status-box" class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
-              <span class="font-semibold text-rose-600">Status:</span> Not connected yet.
-            </div>
-          </div>
-        </section>
-
+    <div id="auth-view" class="hidden max-w-md mx-auto my-6 sm:my-12 glass-panel p-6 sm:p-8 rounded-3xl">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 mx-auto mb-3 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center"><i data-lucide="sparkles" class="w-8 h-8"></i></div>
+        <h2 class="text-2xl font-serif font-bold text-rose-800">Welcome Lovers</h2>
+        <p class="text-xs text-rose-600/80 mt-1">Sign in or create your account with a username and password</p>
       </div>
-    </main>
-  </div>
-
-  <!-- Milestone Modal -->
-  <div id="modal-timeline" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-rose-950/40 backdrop-blur-sm">
-    <div class="glass-panel w-full max-w-md p-6 rounded-3xl shadow-2xl space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 class="text-lg font-serif font-bold text-rose-800">Add Milestone</h3>
-        <button data-close-modal="modal-timeline" class="text-rose-400 hover:text-rose-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <form id="form-timeline" class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-rose-800 mb-1">Title</label>
-          <input type="text" id="tm-title" required placeholder="e.g. First Date, Moved In Together" class="w-full glass-input px-3 py-2 rounded-xl text-sm">
+      <form id="auth-form" class="space-y-4">
+        <div><label class="lbl" for="auth-username">Username</label>
+          <div class="relative"><input type="text" id="auth-username" required placeholder="e.g. Alex123" class="field" style="padding-left:2.5rem" autocomplete="username" autocapitalize="none"><i data-lucide="user" class="w-4 h-4 text-rose-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i></div></div>
+        <div><label class="lbl" for="auth-password">Password</label>
+          <div class="relative"><input type="password" id="auth-password" required placeholder="••••••••" class="field" style="padding-left:2.5rem" autocomplete="current-password"><i data-lucide="key-round" class="w-4 h-4 text-rose-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i></div></div>
+        <div id="auth-error" class="hidden text-xs text-rose-700 bg-rose-100/90 p-3 rounded-xl border border-rose-300 font-medium"></div>
+        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+          <button type="submit" id="auth-signin-btn" class="btn btn-p flex-1 !text-sm">Sign In</button>
+          <button type="button" id="auth-signup-btn" class="btn btn-o flex-1 !text-sm">Create Account</button>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-rose-800 mb-1">Date</label>
-          <input type="date" id="tm-date" required class="w-full glass-input px-3 py-2 rounded-xl text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-rose-800 mb-1">Description / Notes</label>
-          <textarea id="tm-desc" rows="3" placeholder="What made this moment unforgettable?" class="w-full glass-input px-3 py-2 rounded-xl text-sm"></textarea>
-        </div>
-        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold shadow-md transition">Save Milestone</button>
       </form>
     </div>
-  </div>
 
-  <!-- Memory Upload Modal -->
-  <div id="modal-memory" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-rose-950/40 backdrop-blur-sm">
-    <div class="glass-panel w-full max-w-md p-6 rounded-3xl shadow-2xl space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 class="text-lg font-serif font-bold text-rose-800">Add Photo Memory</h3>
-        <button data-close-modal="modal-memory" class="text-rose-400 hover:text-rose-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <form id="form-memory" class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-rose-800 mb-1">Memory Title</label>
-          <input type="text" id="mem-title" required placeholder="e.g. Summer Beach Trip" class="w-full glass-input px-3 py-2 rounded-xl text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-rose-800 mb-1">Upload Photo File</label>
-          <input type="file" id="mem-file-input" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif, image/bmp, image/*" class="w-full text-xs text-rose-700 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 cursor-pointer">
-          <div id="mem-file-preview" class="hidden mt-2 h-32 rounded-xl overflow-hidden border border-rose-200">
-            <img id="mem-preview-img" src="" class="w-full h-full object-cover">
+    <div id="app-content" class="hidden">
+
+      <section id="tab-counter" class="tab-content space-y-5">
+        <div class="glass-panel p-5 sm:p-8 rounded-3xl text-center">
+          <div class="flex items-start justify-center gap-3 sm:gap-12">
+            <div class="text-center min-w-0">
+              <div class="avatar"><img id="card-user-img" class="hidden w-full h-full object-cover" alt=""><span id="card-user-avatar-text">Y</span></div>
+              <label for="user-photo-upload" class="chip mt-2"><i data-lucide="camera" class="w-3 h-3"></i><span>Change Photo</span></label>
+              <input type="file" id="user-photo-upload" accept="image/*" class="hidden">
+              <div id="card-user-name" class="mt-1 text-sm sm:text-base font-bold text-rose-900 break-words max-w-[7rem] sm:max-w-none">You</div>
+            </div>
+            <div class="flex flex-col items-center pt-4 sm:pt-6">
+              <div class="p-3 bg-rose-500 text-white rounded-full shadow-lg shadow-rose-300 animate-pulse"><i data-lucide="heart" class="w-6 h-6 sm:w-8 sm:h-8 fill-white"></i></div>
+              <span class="text-[10px] text-rose-500 uppercase tracking-widest mt-1.5 font-bold">In Love</span>
+            </div>
+            <div class="text-center min-w-0">
+              <div class="avatar"><img id="card-partner-img" class="hidden w-full h-full object-cover" alt=""><span id="card-partner-avatar-text">?</span></div>
+              <div class="mt-2 text-xs text-rose-400 font-medium">Partner</div>
+              <div id="card-partner-name" class="mt-1 text-sm sm:text-base font-bold text-rose-900 break-words max-w-[7rem] sm:max-w-none">Partner</div>
+            </div>
+          </div>
+          <div class="mt-5 inline-flex flex-col items-center bg-rose-50/70 p-4 rounded-2xl border border-rose-200/60 max-w-full">
+            <span class="text-xs text-rose-600 uppercase tracking-wider font-semibold mb-2">Our Relationship Started On</span>
+            <div class="flex flex-wrap justify-center gap-2">
+              <input type="date" id="start-date-input" class="field text-center font-medium" style="width:auto">
+              <button id="save-start-date-btn" class="btn btn-p">Update Date</button>
+            </div>
           </div>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-rose-800 mb-1">Caption / Story</label>
-          <textarea id="mem-caption" rows="2" placeholder="Write a cute note about this memory..." class="w-full glass-input px-3 py-2 rounded-xl text-sm"></textarea>
+        <div id="counter-grid" class="grid grid-cols-3 md:grid-cols-6 gap-2 sm:gap-4"></div>
+        <div class="glass-panel p-4 rounded-2xl text-center text-sm font-medium text-rose-800">Total togetherness: <span id="cnt-total-days" class="text-lg font-bold text-rose-600">0</span> wonderful days! 💕</div>
+      </section>
+
+      <section id="tab-timeline" class="tab-content hidden space-y-6">
+        <div class="sec-head">
+          <div><h3 class="text-xl font-serif font-bold text-rose-800">Our Milestones</h3><p class="text-xs text-rose-500">Important dates and milestones in our relationship</p></div>
+          <button data-open="modal-timeline" class="btn btn-p"><i data-lucide="plus" class="w-4 h-4"></i><span>Add Event</span></button>
         </div>
-        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold shadow-md transition">Upload Memory</button>
-      </form>
+        <div class="relative border-l-2 border-rose-300 ml-3 sm:ml-8 pl-5 sm:pl-6 space-y-6 py-2" id="timeline-list"></div>
+      </section>
+
+      <section id="tab-memories" class="tab-content hidden space-y-6">
+        <div class="sec-head">
+          <div><h3 class="text-xl font-serif font-bold text-rose-800">Photo Memories</h3><p class="text-xs text-rose-500">Photos of your favorite dates and moments together</p></div>
+          <button data-open="modal-memory" class="btn btn-p"><i data-lucide="camera" class="w-4 h-4"></i><span>Add Photo</span></button>
+        </div>
+        <div id="memories-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6"></div>
+      </section>
+
+      <section id="tab-dates" class="tab-content hidden space-y-6">
+        <div class="sec-head">
+          <div><h3 class="text-xl font-serif font-bold text-rose-800">Date Night Scheduler</h3><p class="text-xs text-rose-500">Propose date ideas for your partner to accept or decline</p></div>
+          <button data-open="modal-date" class="btn btn-p"><i data-lucide="plus-circle" class="w-4 h-4"></i><span>Propose</span></button>
+        </div>
+        <div id="dates-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+      </section>
+
+      <section id="tab-settings" class="tab-content hidden max-w-xl mx-auto">
+        <div class="glass-panel p-5 sm:p-6 rounded-3xl space-y-6">
+          <h3 class="text-xl font-serif font-bold text-rose-800 flex items-center gap-2"><i data-lucide="user-plus" class="w-5 h-5 text-rose-500"></i><span>Connect With Your Partner</span></h3>
+          <div class="space-y-2">
+            <label class="lbl uppercase tracking-wider">Your Connection Code</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input type="text" id="my-link-code" readonly class="field font-mono text-rose-700 font-bold select-all">
+              <button id="copy-code-btn" class="btn btn-o"><i data-lucide="copy" class="w-4 h-4"></i><span>Copy</span></button>
+            </div>
+            <p class="text-[11px] text-rose-500">Share this code with your partner so they can link accounts with you!</p>
+          </div>
+          <hr class="border-rose-200">
+          <div id="link-section" class="space-y-2">
+            <label class="lbl uppercase tracking-wider">Connect to Partner</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input type="text" id="partner-code-input" placeholder="Paste partner's connection code..." class="field" autocapitalize="none" autocomplete="off">
+              <button id="link-partner-btn" class="btn btn-p"><i data-lucide="link" class="w-4 h-4"></i><span>Link Partner</span></button>
+            </div>
+          </div>
+          <div id="unlink-section" class="hidden space-y-2">
+            <label class="lbl uppercase tracking-wider">Relationship</label>
+            <p class="text-[11px] text-rose-500">Unlinking disconnects both accounts. Your shared timeline, photos and dates are kept, and come back if you link with the same partner again.</p>
+            <button data-open="modal-unlink" class="btn btn-o w-full"><i data-lucide="heart-off" class="w-4 h-4"></i><span>Unlink from Partner</span></button>
+          </div>
+          <div id="partner-status-box" class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800"></div>
+        </div>
+      </section>
     </div>
+  </main>
+</div>
+
+<div id="drawer-overlay" class="hidden mob-only"></div>
+<aside id="drawer" class="mob-only" aria-label="Menu">
+  <div class="flex items-center justify-between px-4 py-3 border-b border-rose-200">
+    <span class="font-serif text-lg font-bold text-rose-600">Menu</span>
+    <button id="drawer-close-btn" aria-label="Close menu" class="icon-btn p-2 flex items-center justify-center text-rose-400"><i data-lucide="x" class="w-5 h-5"></i></button>
   </div>
-
-  <!-- Propose Date Modal -->
-  <div id="modal-date" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-rose-950/40 backdrop-blur-sm">
-    <div class="glass-panel w-full max-w-md p-6 rounded-3xl shadow-2xl space-y-4">
-      <div class="flex justify-between items-center">
-        <h3 class="text-lg font-serif font-bold text-rose-800">Propose a Date Night</h3>
-        <button data-close-modal="modal-date" class="text-rose-400 hover:text-rose-600"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <form id="form-date" class="space-y-3">
-        <div>
-          <label class="block text-xs font-semibold text-rose-800 mb-1">Date Idea Title</label>
-          <input type="text" id="dt-title" required placeholder="e.g. Picnic at the Park, Movie & Pizza" class="w-full glass-input px-3 py-2 rounded-xl text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-rose-800 mb-1">Date & Time</label>
-          <input type="datetime-local" id="dt-datetime" required class="w-full glass-input px-3 py-2 rounded-xl text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-rose-800 mb-1">Location</label>
-          <input type="text" id="dt-location" placeholder="e.g. Favorite Italian Restaurant" class="w-full glass-input px-3 py-2 rounded-xl text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-rose-800 mb-1">Details / Notes</label>
-          <textarea id="dt-notes" rows="2" placeholder="Wear something nice!" class="w-full glass-input px-3 py-2 rounded-xl text-sm"></textarea>
-        </div>
-        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold shadow-md transition">Send Date Proposal</button>
-      </form>
-    </div>
+  <div class="px-4 py-3 border-b border-rose-100">
+    <div id="drawer-user-name" class="text-sm font-semibold text-rose-900">Loading...</div>
+    <div id="drawer-partner-status" class="text-xs text-rose-500">Checking connection...</div>
   </div>
+  <nav id="drawer-nav" class="flex-1 overflow-y-auto p-3 space-y-1"></nav>
+  <div class="p-3 border-t border-rose-200"><button id="drawer-logout-btn" class="btn btn-o w-full !text-sm"><i data-lucide="log-out" class="w-4 h-4"></i><span>Sign Out</span></button></div>
+</aside>
 
-  <!-- Notification Modal -->
-  <div id="modal-notify" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-rose-950/40 backdrop-blur-sm">
-    <div class="glass-panel w-full max-w-xs p-5 rounded-2xl text-center space-y-3 shadow-2xl">
-      <div class="w-10 h-10 mx-auto rounded-full bg-rose-100 text-rose-500 flex items-center justify-center">
-        <i data-lucide="heart" class="w-5 h-5 fill-rose-500"></i>
-      </div>
-      <div id="notify-message" class="text-sm font-semibold text-rose-900">Notice message</div>
-      <button id="notify-close-btn" class="w-full py-2 bg-rose-500 text-white rounded-xl text-xs font-semibold shadow-md">OK</button>
-    </div>
-  </div>
+<div id="modal-timeline" class="modal hidden"><div class="glass-panel modal-card space-y-4">
+  <div class="flex justify-between items-center"><h3 class="text-lg font-serif font-bold text-rose-800">Add Milestone</h3><button data-close-modal aria-label="Close" class="icon-btn text-rose-400"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+  <form id="form-timeline" class="space-y-3">
+    <div><label class="lbl">Title</label><input type="text" id="tm-title" required placeholder="e.g. First Date, Moved In Together" class="field"></div>
+    <div><label class="lbl">Date</label><input type="date" id="tm-date" required class="field"></div>
+    <div><label class="lbl">Description / Notes</label><textarea id="tm-desc" rows="3" placeholder="What made this moment unforgettable?" class="field"></textarea></div>
+    <button type="submit" class="btn btn-p w-full">Save Milestone</button>
+  </form>
+</div></div>
 
-  <script>
-    (function initFloatingHearts() {
-      const canvas = document.getElementById('hearts-canvas');
-      const ctx = canvas.getContext('2d');
-      let width = canvas.width = window.innerWidth;
-      let height = canvas.height = window.innerHeight;
+<div id="modal-memory" class="modal hidden"><div class="glass-panel modal-card space-y-4">
+  <div class="flex justify-between items-center"><h3 class="text-lg font-serif font-bold text-rose-800">Add Photo Memory</h3><button data-close-modal aria-label="Close" class="icon-btn text-rose-400"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+  <form id="form-memory" class="space-y-3">
+    <div><label class="lbl">Memory Title</label><input type="text" id="mem-title" required placeholder="e.g. Summer Beach Trip" class="field"></div>
+    <div><label class="lbl">Photo</label>
+      <input type="file" id="mem-file-input" accept="image/*" class="w-full text-xs text-rose-700 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-rose-100 file:text-rose-700 cursor-pointer">
+      <div id="mem-file-preview" class="hidden mt-2 h-32 rounded-xl overflow-hidden border border-rose-200"><img id="mem-preview-img" class="w-full h-full object-cover" alt=""></div></div>
+    <div><label class="lbl">Caption / Story</label><textarea id="mem-caption" rows="2" placeholder="Write a cute note about this memory..." class="field"></textarea></div>
+    <button type="submit" class="btn btn-p w-full">Upload Memory</button>
+  </form>
+</div></div>
 
-      window.addEventListener('resize', () => {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-      });
+<div id="modal-date" class="modal hidden"><div class="glass-panel modal-card space-y-4">
+  <div class="flex justify-between items-center"><h3 class="text-lg font-serif font-bold text-rose-800">Propose a Date Night</h3><button data-close-modal aria-label="Close" class="icon-btn text-rose-400"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+  <form id="form-date" class="space-y-3">
+    <div><label class="lbl">Date Idea Title</label><input type="text" id="dt-title" required placeholder="e.g. Picnic at the Park" class="field"></div>
+    <div><label class="lbl">Date &amp; Time</label><input type="datetime-local" id="dt-datetime" required class="field"></div>
+    <div><label class="lbl">Location</label><input type="text" id="dt-location" placeholder="e.g. Favorite Italian Restaurant" class="field"></div>
+    <div><label class="lbl">Details / Notes</label><textarea id="dt-notes" rows="2" placeholder="Wear something nice!" class="field"></textarea></div>
+    <button type="submit" class="btn btn-p w-full">Send Date Proposal</button>
+  </form>
+</div></div>
 
-      const hearts = Array.from({ length: 28 }, () => ({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        size: Math.random() * 14 + 8,
-        speedY: Math.random() * 0.8 + 0.3,
-        speedX: Math.sin(Math.random() * Math.PI) * 0.4,
-        opacity: Math.random() * 0.4 + 0.2,
-        swing: Math.random() * 0.02
-      }));
+<div id="modal-unlink" class="modal hidden"><div class="glass-panel modal-card text-center space-y-4" style="max-width:22rem">
+  <div class="w-12 h-12 mx-auto rounded-full bg-rose-100 text-rose-500 flex items-center justify-center"><i data-lucide="heart-off" class="w-6 h-6"></i></div>
+  <h3 class="text-lg font-serif font-bold text-rose-800">Unlink from your partner?</h3>
+  <p class="text-xs text-rose-700">Both of you will be disconnected right away. Shared memories stay saved and return if you link again.</p>
+  <div class="flex gap-2"><button data-close-modal class="btn btn-o flex-1">Cancel</button><button id="confirm-unlink-btn" class="btn btn-p flex-1">Unlink</button></div>
+</div></div>
 
-      function drawHeart(x, y, size, opacity) {
-        ctx.save();
-        ctx.beginPath();
-        ctx.fillStyle = `rgba(244, 63, 94, ${opacity})`;
-        const topCurveHeight = size * 0.3;
-        ctx.moveTo(x, y + topCurveHeight);
-        ctx.bezierCurveTo(x, y, x - size / 2, y, x - size / 2, y + topCurveHeight);
-        ctx.bezierCurveTo(x - size / 2, y + (size + topCurveHeight) / 2, x, y + size, x, y + size);
-        ctx.bezierCurveTo(x, y + size, x + size / 2, y + (size + topCurveHeight) / 2, x + size / 2, y + topCurveHeight);
-        ctx.bezierCurveTo(x + size / 2, y, x, y, x, y + topCurveHeight);
-        ctx.closePath();
-        ctx.fill();
-        ctx.restore();
-      }
+<div id="modal-notify" class="modal hidden"><div class="glass-panel modal-card text-center space-y-3" style="max-width:20rem">
+  <div class="w-10 h-10 mx-auto rounded-full bg-rose-100 text-rose-500 flex items-center justify-center"><i data-lucide="heart" class="w-5 h-5 fill-rose-500"></i></div>
+  <div id="notify-message" class="text-sm font-semibold text-rose-900 break-words"></div>
+  <button id="notify-close-btn" class="btn btn-p w-full">OK</button>
+</div></div>
 
-      function render() {
-        ctx.clearRect(0, 0, width, height);
-        hearts.forEach(h => {
-          h.y -= h.speedY;
-          h.x += Math.sin(h.y * h.swing) * 0.5;
-          if (h.y < -30) {
-            h.y = height + 20;
-            h.x = Math.random() * width;
-          }
-          drawHeart(h.x, h.y, h.size, h.opacity);
-        });
-        requestAnimationFrame(render);
-      }
-      render();
-    })();
-  </script>
+<script>
+(function(){const c=document.getElementById('hearts-canvas'),x=c.getContext('2d');let w,h;const fit=()=>{w=c.width=innerWidth;h=c.height=innerHeight};fit();addEventListener('resize',fit);
+const hs=Array.from({length:innerWidth<640?12:28},()=>({x:Math.random()*w,y:Math.random()*h,s:Math.random()*14+8,v:Math.random()*.8+.3,o:Math.random()*.4+.2,k:Math.random()*.02}));
+function heart(a,b,s,o){const t=s*.3;x.beginPath();x.fillStyle=`rgba(244,63,94,${o})`;x.moveTo(a,b+t);x.bezierCurveTo(a,b,a-s/2,b,a-s/2,b+t);x.bezierCurveTo(a-s/2,b+(s+t)/2,a,b+s,a,b+s);x.bezierCurveTo(a,b+s,a+s/2,b+(s+t)/2,a+s/2,b+t);x.bezierCurveTo(a+s/2,b,a,b,a,b+t);x.fill()}
+(function r(){x.clearRect(0,0,w,h);if(!document.hidden)hs.forEach(p=>{p.y-=p.v;p.x+=Math.sin(p.y*p.k)*.5;if(p.y<-30){p.y=h+20;p.x=Math.random()*w}heart(p.x,p.y,p.s,p.o)});requestAnimationFrame(r)})()})();
+</script>
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-    import { 
-      getAuth, 
-      createUserWithEmailAndPassword, 
-      signInWithEmailAndPassword, 
-      signOut, 
-      onAuthStateChanged,
-      updateProfile 
-    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-    import { 
-      getFirestore, 
-      doc, 
-      setDoc, 
-      getDoc, 
-      updateDoc, 
-      collection, 
-      addDoc, 
-      onSnapshot 
-    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
-    // Your Exact Live Firebase Configuration
-    const appId = 'tracker-79eb1-app';
-    const firebaseConfig = {
-      apiKey: "AIzaSyBmizyQigF97peaagtpIKLxvF874sS7w1w",
-      authDomain: "tracker-79eb1.firebaseapp.com",
-      projectId: "tracker-79eb1",
-      storageBucket: "tracker-79eb1.firebasestorage.app",
-      messagingSenderId: "1047676716273",
-      appId: "1:1047676716273:web:23b9c2dfb6f4999b3b1550"
+const appId = 'tracker-79eb1-app';
+const firebaseConfig = {
+  apiKey: "AIzaSyBmizyQigF97peaagtpIKLxvF874sS7w1w",
+  authDomain: "tracker-79eb1.firebaseapp.com",
+  projectId: "tracker-79eb1",
+  storageBucket: "tracker-79eb1.firebasestorage.app",
+  messagingSenderId: "1047676716273",
+  appId: "1:1047676716273:web:23b9c2dfb6f4999b3b1550"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});   // stay signed in after closing the site
+let db;
+try { db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+catch (e) { db = getFirestore(app); }
+
+const $ = id => document.getElementById(id);
+const ref = (...p) => doc(db, 'artifacts', appId, 'public', 'data', ...p);
+const col = (...p) => collection(db, 'artifacts', appId, 'public', 'data', ...p);
+
+let me = null, profile = null, partner = null, couple = null, start = new Date(), tick = null, memImg = null;
+let unsubs = [], cUnsubs = [], activeCouple = null, watchedPartner = null;
+
+const TABS = [['tab-counter','clock','Counter'],['tab-timeline','git-commit','Timeline'],['tab-memories','image','Memories'],['tab-dates','calendar','Dates'],['tab-settings','users','Partner']];
+const CNT = [['years','Years','text-rose-600'],['months','Months','text-rose-500'],['days','Days','text-rose-600'],['hours','Hours','text-pink-600'],['minutes','Minutes','text-pink-500'],['seconds','Seconds','text-rose-600']];
+
+const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+const usernameToEmail = u => `${u.trim().toLowerCase().replace(/[^a-z0-9_]/g,'')}@ourloveapp.local`;
+const pad = n => String(n).padStart(2, '0');
+const toLocalDate = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+// Dates are saved as "YYYY-MM-DDT00:00:00.000Z"; read the date part as a local calendar day so the counter matches the picker.
+const parseStart = iso => { const m = /^(\d{4})-(\d{2})-(\d{2})T00:00:00\.000Z$/.exec(iso); return m ? new Date(+m[1], +m[2]-1, +m[3]) : new Date(iso); };
+const showNotice = msg => { $('notify-message').textContent = msg; $('modal-notify').classList.remove('hidden'); };
+const save = (p, msg) => p.catch(e => showNotice(`${msg || 'Could not save'}: ${e.message || e}`));
+const needCouple = () => { if (!profile?.coupleId) { showNotice('Connect with your partner first!'); return false; } return true; };
+
+function processImage(file, max = 1200, q = 0.8) {
+  return new Promise((res, rej) => {
+    if (!file || !file.type.startsWith('image/')) return rej(new Error('Selected file is not a valid image.'));
+    const r = new FileReader();
+    r.onerror = () => rej(new Error('Failed to read image file.'));
+    r.onload = e => {
+      const img = new Image();
+      img.onerror = () => rej(new Error('Could not process this image. Try a JPG or PNG.'));
+      img.onload = () => {
+        try {
+          let w = img.width, h = img.height;
+          if (w > max || h > max) { if (w > h) { h = Math.round(h * max / w); w = max; } else { w = Math.round(w * max / h); h = max; } }
+          const c = document.createElement('canvas'); c.width = w; c.height = h;
+          const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
+          res(c.toDataURL('image/jpeg', q));
+        } catch (err) { rej(err); }
+      };
+      img.src = e.target.result;
     };
+    r.readAsDataURL(file);
+  });
+}
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+/* ---------- Navigation: desktop tabs + mobile hamburger drawer ---------- */
+const tabBtn = (t, drawer) => `<button data-tab="${t[0]}" class="nav-tab ${drawer ? 'w-full px-4 py-3 text-base' : 'px-3 py-2'}"><i data-lucide="${t[1]}" class="w-4 h-4"></i><span>${t[2]}</span></button>`;
+$('main-nav-inner').innerHTML = TABS.map(t => tabBtn(t, false)).join('');
+$('drawer-nav').innerHTML = TABS.map(t => tabBtn(t, true)).join('');
+$('counter-grid').innerHTML = CNT.map(([k,l,c]) => `<div class="glass-panel p-3 sm:p-4 rounded-2xl text-center"><div id="cnt-${k}" class="text-2xl sm:text-4xl font-bold font-serif ${c}">0</div><div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">${l}</div></div>`).join('');
 
-    // Global State Variables
-    let currentUser = null;
-    let userProfile = null;
-    let partnerProfile = null;
-    let coupleData = null;
-    let relationshipStartDate = new Date();
-    let counterInterval = null;
-    let memoryBase64String = null;
-    let unsubs = [];
+function switchTab(id) {
+  document.querySelectorAll('.nav-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  document.querySelectorAll('.tab-content').forEach(s => s.classList.toggle('hidden', s.id !== id));
+  window.scrollTo({ top: 0 });
+}
+function openDrawer() { $('drawer').classList.add('open'); $('drawer-overlay').classList.remove('hidden'); $('menu-btn').setAttribute('aria-expanded', 'true'); document.body.style.overflow = 'hidden'; }
+function closeDrawer() { $('drawer').classList.remove('open'); $('drawer-overlay').classList.add('hidden'); $('menu-btn').setAttribute('aria-expanded', 'false'); document.body.style.overflow = ''; }
+document.querySelectorAll('.nav-tab').forEach(b => b.addEventListener('click', () => { switchTab(b.dataset.tab); closeDrawer(); }));
+$('menu-btn').addEventListener('click', openDrawer);
+$('drawer-close-btn').addEventListener('click', closeDrawer);
+$('drawer-overlay').addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+matchMedia('(min-width: 768px)').addEventListener('change', e => { if (e.matches) closeDrawer(); });
+$('drawer-logout-btn').addEventListener('click', () => { closeDrawer(); signOut(auth); });
+$('logout-btn').addEventListener('click', () => signOut(auth));
 
-    // Helper: Translate Username to Synthetic Email Address
-    function usernameToEmail(username) {
-      const clean = username.trim().toLowerCase().replace(/[^a-z0-9_]/g, '');
-      return `${clean}@ourloveapp.local`;
+document.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', () => $(b.dataset.open).classList.remove('hidden')));
+document.querySelectorAll('[data-close-modal]').forEach(b => b.addEventListener('click', () => b.closest('.modal').classList.add('hidden')));
+document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => { if (e.target === m) m.classList.add('hidden'); }));
+$('notify-close-btn').addEventListener('click', () => $('modal-notify').classList.add('hidden'));
+
+/* ---------- Auth ---------- */
+function setLoggedIn(on) {
+  $('auth-view').classList.toggle('hidden', on);
+  ['app-content', 'nav-user-bar', 'main-nav'].forEach(i => $(i).classList.toggle('hidden', !on));
+  if (!on) closeDrawer();
+}
+onAuthStateChanged(auth, user => {
+  $('boot-splash')?.remove();
+  if (user) { me = user; setLoggedIn(true); syncProfile(); }
+  else {
+    me = null; profile = null; cleanup(); resetCouple();
+    ['nav-user-name', 'drawer-user-name', 'card-user-name'].forEach(i => $(i).textContent = 'You');
+    setAvatar('user', null, 'Y'); setLoggedIn(false);
+  }
+});
+
+function authError(e, signup) {
+  const box = $('auth-error');
+  const m = { 'auth/invalid-credential': "Incorrect username or password. New here? Tap 'Create Account'.", 'auth/wrong-password': 'Incorrect username or password.', 'auth/user-not-found': "No account with that username. Tap 'Create Account'.", 'auth/email-already-in-use': 'That username is taken. Choose another, or Sign In.', 'auth/network-request-failed': 'No connection. Check your internet and try again.' };
+  box.textContent = m[e.code] || e.message; box.classList.remove('hidden');
+}
+$('auth-signin-btn').addEventListener('click', async e => {
+  e.preventDefault(); $('auth-error').classList.add('hidden');
+  const u = $('auth-username').value.trim(), p = $('auth-password').value;
+  if (!u || !p) return authError({ message: 'Please enter both username and password.' });
+  try { await signInWithEmailAndPassword(auth, usernameToEmail(u), p); } catch (err) { authError(err); }
+});
+$('auth-signup-btn').addEventListener('click', async e => {
+  e.preventDefault(); $('auth-error').classList.add('hidden');
+  const u = $('auth-username').value.trim(), p = $('auth-password').value;
+  if (!u || !p) return authError({ message: 'Please choose a username and password.' });
+  if (p.length < 6) return authError({ message: 'Password must be at least 6 characters long.' });
+  try { const c = await createUserWithEmailAndPassword(auth, usernameToEmail(u), p); await updateProfile(c.user, { displayName: u }); } catch (err) { authError(err); }
+});
+
+/* ---------- Live sync (everything lives in Firestore, so it follows each account across devices) ---------- */
+function cleanupCouple() { cUnsubs.forEach(u => u()); cUnsubs = []; activeCouple = null; watchedPartner = null; partner = null; couple = null; }
+function cleanup() { unsubs.forEach(u => u()); unsubs = []; cleanupCouple(); }
+
+function setAvatar(who, url, name) {
+  const i = $(`card-${who}-img`), t = $(`card-${who}-avatar-text`);
+  if (url) { i.src = url; i.classList.remove('hidden'); t.classList.add('hidden'); }
+  else { i.classList.add('hidden'); t.classList.remove('hidden'); t.textContent = (name || '?').charAt(0).toUpperCase(); }
+}
+function setPartner(p, status) {
+  $('nav-partner-status').textContent = status;
+  $('drawer-partner-status').textContent = status;
+  $('partner-status-box').innerHTML = `<span class="font-semibold text-rose-600">Status:</span> ${esc(status)}`;
+  $('card-partner-name').textContent = p ? (p.displayName || 'Partner') : 'Partner';
+  setAvatar('partner', p?.photoUrl, p ? p.displayName : '?');
+}
+function toggleLinked(on) { $('link-section').classList.toggle('hidden', on); $('unlink-section').classList.toggle('hidden', !on); }
+function resetCouple() {
+  clearInterval(tick);
+  CNT.forEach(([k]) => $('cnt-' + k).textContent = '0'); $('cnt-total-days').textContent = '0';
+  $('start-date-input').value = '';
+  renderTimeline([]); renderMemories([]); renderDates([]);
+  setPartner(null, 'Not connected to a partner yet.'); toggleLinked(false);
+}
+
+function syncProfile() {
+  const ur = ref('users', me.uid);
+  unsubs.push(onSnapshot(ur, async snap => {
+    if (!snap.exists()) {
+      if (snap.metadata.fromCache) return;   // never overwrite a real profile because of an empty offline cache
+      const name = me.displayName || $('auth-username').value.trim() || (me.email || '').split('@')[0] || 'User';
+      await setDoc(ur, { uid: me.uid, displayName: name, photoUrl: null, coupleId: null, createdAt: new Date().toISOString() });
+      return;
     }
+    profile = snap.data();
+    const n = profile.displayName || 'You';
+    ['nav-user-name', 'drawer-user-name', 'card-user-name'].forEach(i => $(i).textContent = n);
+    $('my-link-code').value = me.uid;
+    setAvatar('user', profile.photoUrl, n);
+    if (profile.coupleId) { toggleLinked(true); if (profile.coupleId !== activeCouple) syncCouple(profile.coupleId); }
+    else { cleanupCouple(); resetCouple(); }
+  }, console.error));
+}
 
-    function showNotice(msg) {
-      document.getElementById('notify-message').innerText = msg;
-      document.getElementById('modal-notify').classList.remove('hidden');
+function syncCouple(id) {
+  cleanupCouple(); activeCouple = id;
+  cUnsubs.push(onSnapshot(ref('couples', id), snap => {
+    if (!snap.exists()) return;
+    couple = snap.data();
+    const ps = couple.partners || [];
+    if (!ps.includes(me.uid)) {   // partner unlinked us
+      if (!snap.metadata.fromCache) updateDoc(ref('users', me.uid), { coupleId: null }).catch(() => {});
+      return;
     }
-    document.getElementById('notify-close-btn').addEventListener('click', () => {
-      document.getElementById('modal-notify').classList.add('hidden');
-    });
-
-    /**
-     * Universal Image Processor & Compressor
-     * Converts any standard image format (JPG, PNG, WEBP, GIF, BMP) into a normalized JPEG Data URL
-     * and resizes large images to prevent exceeding Firestore payload limits.
-     */
-    function processAndNormalizeImage(file, maxDimension = 1200, quality = 0.8) {
-      return new Promise((resolve, reject) => {
-        if (!file || !file.type.startsWith('image/')) {
-          reject(new Error("Selected file is not a valid image format."));
-          return;
-        }
-
-        const reader = new FileReader();
-        reader.onerror = () => reject(new Error("Failed to read image file."));
-        reader.onload = (e) => {
-          const img = new Image();
-          img.onerror = () => reject(new Error("Failed to process image. File may be corrupted or unsupported."));
-          img.onload = () => {
-            try {
-              let width = img.width;
-              let height = img.height;
-
-              // Scale down dimensions if exceeding max threshold
-              if (width > maxDimension || height > maxDimension) {
-                if (width > height) {
-                  height = Math.round((height * maxDimension) / width);
-                  width = maxDimension;
-                } else {
-                  width = Math.round((width * maxDimension) / height);
-                  height = maxDimension;
-                }
-              }
-
-              const canvas = document.createElement('canvas');
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-
-              // Draw canvas background white (to prevent black background on PNG transparency -> JPEG conversion)
-              ctx.fillStyle = '#FFFFFF';
-              ctx.fillRect(0, 0, width, height);
-              ctx.drawImage(img, 0, 0, width, height);
-
-              // Normalize output as image/jpeg Data URL
-              const dataUrl = canvas.toDataURL('image/jpeg', quality);
-              resolve(dataUrl);
-            } catch (err) {
-              reject(err);
-            }
-          };
-          img.src = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
+    if (couple.startDate) { start = parseStart(couple.startDate); $('start-date-input').value = toLocalDate(start); startCounter(); }
+    const pid = ps.find(x => x !== me.uid);
+    if (pid && pid !== watchedPartner) {
+      watchedPartner = pid;
+      cUnsubs.push(onSnapshot(ref('users', pid), s => { if (s.exists()) { partner = s.data(); setPartner(partner, `Connected with ${partner.displayName}`); } }));
     }
-
-    function initAuth() {
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
-          currentUser = user;
-          document.getElementById('auth-view').classList.add('hidden');
-          document.getElementById('app-content').classList.remove('hidden');
-          document.getElementById('nav-user-bar').classList.remove('hidden');
-          document.getElementById('main-nav').classList.remove('hidden');
-
-          await syncUserProfile();
-        } else {
-          currentUser = null;
-          userProfile = null;
-          partnerProfile = null;
-          coupleData = null;
-          cleanupListeners();
-          document.getElementById('auth-view').classList.remove('hidden');
-          document.getElementById('app-content').classList.add('hidden');
-          document.getElementById('nav-user-bar').classList.add('hidden');
-          document.getElementById('main-nav').classList.add('hidden');
-        }
-      });
-    }
-
-    function cleanupListeners() {
-      unsubs.forEach(unsub => unsub());
-      unsubs = [];
-    }
-
-    async function syncUserProfile() {
-      if (!currentUser) return;
-      const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-      
-      const unsubUser = onSnapshot(userDocRef, async (snap) => {
-        if (snap.exists()) {
-          userProfile = snap.data();
-        } else {
-          const rawUsername = document.getElementById('auth-username').value.trim() || currentUser.displayName || 'User';
-          userProfile = {
-            uid: currentUser.uid,
-            displayName: rawUsername,
-            photoUrl: null,
-            coupleId: null,
-            createdAt: new Date().toISOString()
-          };
-          await setDoc(userDocRef, userProfile);
-        }
-
-        document.getElementById('nav-user-name').innerText = userProfile.displayName || 'You';
-        document.getElementById('card-user-name').innerText = userProfile.displayName || 'You';
-        document.getElementById('my-link-code').value = currentUser.uid;
-
-        if (userProfile.photoUrl) {
-          document.getElementById('card-user-img').src = userProfile.photoUrl;
-          document.getElementById('card-user-img').classList.remove('hidden');
-          document.getElementById('card-user-avatar-text').classList.add('hidden');
-        } else {
-          document.getElementById('card-user-avatar-text').innerText = (userProfile.displayName || 'Y').charAt(0).toUpperCase();
-        }
-
-        if (userProfile.coupleId) {
-          syncCoupleData(userProfile.coupleId);
-        } else {
-          updatePartnerUI(null, "Not connected to a partner yet.");
-        }
-      });
-
-      unsubs.push(unsubUser);
-    }
-
-    function syncCoupleData(coupleId) {
-      const coupleDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId);
-
-      const unsubCouple = onSnapshot(coupleDocRef, (snap) => {
-        if (snap.exists()) {
-          coupleData = snap.data();
-          const partnerUid = coupleData.partners.find(id => id !== currentUser.uid);
-
-          if (partnerUid) {
-            const partnerDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', partnerUid);
-            getDoc(partnerDocRef).then(pSnap => {
-              if (pSnap.exists()) {
-                partnerProfile = pSnap.data();
-                updatePartnerUI(partnerProfile, `Connected with ${partnerProfile.displayName}`);
-              }
-            });
-          }
-
-          if (coupleData.startDate) {
-            relationshipStartDate = new Date(coupleData.startDate);
-            document.getElementById('start-date-input').value = coupleData.startDate.split('T')[0];
-            startCounter();
-          }
-
-          syncSubcollections(coupleId);
-        }
-      });
-
-      unsubs.push(unsubCouple);
-    }
-
-    function updatePartnerUI(partner, statusText) {
-      document.getElementById('nav-partner-status').innerText = statusText;
-      document.getElementById('partner-status-box').innerHTML = `<span class="font-semibold text-rose-600">Status:</span> ${statusText}`;
-
-      if (partner) {
-        document.getElementById('card-partner-name').innerText = partner.displayName || 'Partner';
-        if (partner.photoUrl) {
-          document.getElementById('card-partner-img').src = partner.photoUrl;
-          document.getElementById('card-partner-img').classList.remove('hidden');
-          document.getElementById('card-partner-avatar-text').classList.add('hidden');
-        } else {
-          document.getElementById('card-partner-avatar-text').innerText = (partner.displayName || 'P').charAt(0).toUpperCase();
-        }
-      } else {
-        document.getElementById('card-partner-name').innerText = 'Partner';
-        document.getElementById('card-partner-avatar-text').innerText = '?';
-      }
-    }
-
-    function syncSubcollections(coupleId) {
-      // Timeline Sync
-      const tmRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'timeline');
-      const unsubTm = onSnapshot(tmRef, (snap) => {
-        const items = [];
-        snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
-        items.sort((a, b) => new Date(a.date) - new Date(b.date));
-        renderTimeline(items);
-      });
-
-      // Memories Sync
-      const memRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories');
-      const unsubMem = onSnapshot(memRef, (snap) => {
-        const items = [];
-        snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
-        renderMemories(items);
-      });
-
-      // Dates Sync
-      const dateRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'dates');
-      const unsubDate = onSnapshot(dateRef, (snap) => {
-        const items = [];
-        snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
-        items.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
-        renderDates(items);
-      });
-
-      unsubs.push(unsubTm, unsubMem, unsubDate);
-    }
-
-    function startCounter() {
-      if (counterInterval) clearInterval(counterInterval);
-
-      function update() {
-        const now = new Date();
-        const diffMs = now - relationshipStartDate;
-
-        if (diffMs < 0) {
-          ['cnt-years','cnt-months','cnt-days','cnt-hours','cnt-minutes','cnt-seconds','cnt-total-days'].forEach(id => {
-            document.getElementById(id).innerText = '0';
-          });
-          return;
-        }
-
-        const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-        let years = now.getFullYear() - relationshipStartDate.getFullYear();
-        let months = now.getMonth() - relationshipStartDate.getMonth();
-        let days = now.getDate() - relationshipStartDate.getDate();
-
-        if (days < 0) {
-          months -= 1;
-          const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-          days += lastMonth.getDate();
-        }
-        if (months < 0) {
-          years -= 1;
-          months += 12;
-        }
-
-        document.getElementById('cnt-years').innerText = years;
-        document.getElementById('cnt-months').innerText = months;
-        document.getElementById('cnt-days').innerText = days;
-        document.getElementById('cnt-hours').innerText = now.getHours();
-        document.getElementById('cnt-minutes').innerText = now.getMinutes();
-        document.getElementById('cnt-seconds').innerText = now.getSeconds();
-        document.getElementById('cnt-total-days').innerText = totalDays;
-      }
-
-      update();
-      counterInterval = setInterval(update, 1000);
-    }
-
-    function renderTimeline(items) {
-      const container = document.getElementById('timeline-list');
-      if (items.length === 0) {
-        container.innerHTML = `<p class="text-xs text-rose-400 italic">No milestones added yet. Click "Add Event" to create one!</p>`;
-        return;
-      }
-
-      container.innerHTML = items.map(item => `
-        <div class="relative group">
-          <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-rose-500 border-2 border-white shadow"></div>
-          <div class="glass-panel p-4 rounded-2xl space-y-1">
-            <div class="flex justify-between items-start">
-              <h4 class="font-bold text-rose-900 text-sm sm:text-base">${escapeHtml(item.title)}</h4>
-              <span class="text-[11px] font-semibold text-rose-600 bg-rose-100 px-2.5 py-0.5 rounded-full">${item.date}</span>
-            </div>
-            ${item.desc ? `<p class="text-xs text-rose-800 mt-1">${escapeHtml(item.desc)}</p>` : ''}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function renderMemories(items) {
-      const container = document.getElementById('memories-grid');
-      if (items.length === 0) {
-        container.innerHTML = `<p class="text-xs text-rose-400 italic col-span-full">No photo memories uploaded yet. Click "Add Memory Photo"!</p>`;
-        return;
-      }
-
-      container.innerHTML = items.map(item => `
-        <div class="glass-panel rounded-3xl overflow-hidden group hover:border-rose-400 transition shadow-sm">
-          <div class="h-48 overflow-hidden bg-rose-50 relative">
-            <img src="${item.url}" alt="${escapeHtml(item.title)}" 
-                 class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
-          </div>
-          <div class="p-4 space-y-1">
-            <h4 class="font-bold text-rose-900 text-sm">${escapeHtml(item.title)}</h4>
-            ${item.caption ? `<p class="text-xs text-rose-700 line-clamp-2">${escapeHtml(item.caption)}</p>` : ''}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function renderDates(items) {
-      const container = document.getElementById('dates-list');
-      if (items.length === 0) {
-        container.innerHTML = `<p class="text-xs text-rose-400 italic col-span-full">No date ideas proposed yet. Click "Propose Date" to invite your partner!</p>`;
-        return;
-      }
-
-      container.innerHTML = items.map(item => {
-        const isProposedByMe = item.createdBy === currentUser.uid;
-        let statusBadge = '';
-        if (item.status === 'accepted') {
-          statusBadge = `<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">Accepted ❤️</span>`;
-        } else if (item.status === 'declined') {
-          statusBadge = `<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300">Declined</span>`;
-        } else {
-          statusBadge = `<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300">Pending Response</span>`;
-        }
-
-        const dateFormatted = new Date(item.dateTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
-
-        return `
-          <div class="glass-panel p-5 rounded-3xl space-y-3 flex flex-col justify-between">
-            <div class="space-y-2">
-              <div class="flex justify-between items-start">
-                <h4 class="font-bold text-rose-900 text-base">${escapeHtml(item.title)}</h4>
-                ${statusBadge}
-              </div>
-              <div class="text-xs text-rose-800 space-y-1">
-                <div class="flex items-center space-x-1.5 text-rose-600 font-medium">
-                  <i data-lucide="clock" class="w-3.5 h-3.5"></i>
-                  <span>${dateFormatted}</span>
-                </div>
-                ${item.location ? `
-                  <div class="flex items-center space-x-1.5 text-rose-700">
-                    <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
-                    <span>${escapeHtml(item.location)}</span>
-                  </div>
-                ` : ''}
-              </div>
-              ${item.notes ? `<p class="text-xs text-rose-800 bg-rose-50/80 p-2.5 rounded-2xl border border-rose-200">${escapeHtml(item.notes)}</p>` : ''}
-            </div>
-
-            ${!isProposedByMe && item.status === 'pending' ? `
-              <div class="flex space-x-2 pt-2">
-                <button data-action="accept-date" data-id="${item.id}" class="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold shadow-md transition">Accept Date</button>
-                <button data-action="decline-date" data-id="${item.id}" class="flex-1 py-2 bg-rose-400 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold shadow-md transition">Decline</button>
-              </div>
-            ` : ''}
-          </div>
-        `;
-      }).join('');
-
-      lucide.createIcons();
-    }
-
-    function escapeHtml(str) {
-      return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    }
-
-    // Sign In Button Click
-    document.getElementById('auth-signin-btn').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const rawUsername = document.getElementById('auth-username').value.trim();
-      const pass = document.getElementById('auth-password').value;
-      const errBox = document.getElementById('auth-error');
-      errBox.classList.add('hidden');
-
-      if (!rawUsername || !pass) {
-        errBox.innerText = "Please enter both username and password.";
-        errBox.classList.remove('hidden');
-        return;
-      }
-
-      const syntheticEmail = usernameToEmail(rawUsername);
-
-      try {
-        await signInWithEmailAndPassword(auth, syntheticEmail, pass);
-      } catch (err) {
-        if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-          errBox.innerText = "Incorrect username or password. If you don't have an account, click 'Create Account'.";
-        } else {
-          errBox.innerText = err.message;
-        }
-        errBox.classList.remove('hidden');
-      }
-    });
-
-    // Create Account Button Click
-    document.getElementById('auth-signup-btn').addEventListener('click', async (e) => {
-      e.preventDefault();
-      const rawUsername = document.getElementById('auth-username').value.trim();
-      const pass = document.getElementById('auth-password').value;
-      const errBox = document.getElementById('auth-error');
-      errBox.classList.add('hidden');
-
-      if (!rawUsername || !pass) {
-        errBox.innerText = "Please choose a username and password.";
-        errBox.classList.remove('hidden');
-        return;
-      }
-
-      if (pass.length < 6) {
-        errBox.innerText = "Password must be at least 6 characters long.";
-        errBox.classList.remove('hidden');
-        return;
-      }
-
-      const syntheticEmail = usernameToEmail(rawUsername);
-
-      try {
-        const cred = await createUserWithEmailAndPassword(auth, syntheticEmail, pass);
-        await updateProfile(cred.user, { displayName: rawUsername });
-      } catch (err) {
-        if (err.code === 'auth/email-already-in-use') {
-          errBox.innerText = "Username is already taken! Please choose another username or Sign In.";
-        } else {
-          errBox.innerText = err.message;
-        }
-        errBox.classList.remove('hidden');
-      }
-    });
-
-    document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
-
-    // Profile Photo Upload
-    document.getElementById('user-photo-upload').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file || !currentUser) return;
-
-      try {
-        // Process, compress, and normalize image format (Max 800px for avatars)
-        const base64Photo = await processAndNormalizeImage(file, 800, 0.85);
-        const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-        await updateDoc(userDocRef, { photoUrl: base64Photo });
-        showNotice("Profile photo updated successfully!");
-      } catch (err) {
-        showNotice(err.message || "Error processing profile photo. Please try a different JPG or PNG image.");
-      }
-    });
-
-    // Memory Image File Selection
-    document.getElementById('mem-file-input').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      try {
-        // Process, compress, and normalize memory photo (Max 1200px)
-        memoryBase64String = await processAndNormalizeImage(file, 1200, 0.8);
-        document.getElementById('mem-preview-img').src = memoryBase64String;
-        document.getElementById('mem-file-preview').classList.remove('hidden');
-      } catch (err) {
-        memoryBase64String = null;
-        document.getElementById('mem-file-preview').classList.add('hidden');
-        showNotice(err.message || "Error reading memory photo file. Please try a different image.");
-      }
-    });
-
-    // Memory Image File Selection
-    document.getElementById('mem-file-input').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-
-      try {
-        memoryBase64String = await readFileAsBase64(file);
-        document.getElementById('mem-preview-img').src = memoryBase64String;
-        document.getElementById('mem-file-preview').classList.remove('hidden');
-      } catch (err) {
-        showNotice("Error reading memory photo file.");
-      }
-    });
-
-    // Anniversary Start Date Update
-    document.getElementById('save-start-date-btn').addEventListener('click', async () => {
-      if (!userProfile?.coupleId) {
-        showNotice("Please connect with your partner first in the Partner tab!");
-        return;
-      }
-      const val = document.getElementById('start-date-input').value;
-      if (!val) return;
-
-      const coupleDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId);
-      await updateDoc(coupleDocRef, { startDate: new Date(val).toISOString() });
-      showNotice("Relationship start date updated!");
-    });
-
-    // Partner Linking Code Handler
-    document.getElementById('link-partner-btn').addEventListener('click', async () => {
-      const targetCode = document.getElementById('partner-code-input').value.trim();
-      if (!targetCode) {
-        showNotice("Please enter your partner's connection code.");
-        return;
-      }
-      if (targetCode === currentUser.uid) {
-        showNotice("You cannot link your account with yourself!");
-        return;
-      }
-
-      const coupleId = [currentUser.uid, targetCode].sort().join('_');
-      const coupleDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId);
-
-      await setDoc(coupleDocRef, {
-        partners: [currentUser.uid, targetCode],
-        createdAt: new Date().toISOString(),
-        startDate: new Date().toISOString()
-      }, { merge: true });
-
-      const myUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
-      await updateDoc(myUserRef, { coupleId: coupleId });
-
-      const partnerUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', targetCode);
-      const partnerSnap = await getDoc(partnerUserRef);
-      if (partnerSnap.exists()) {
-        await updateDoc(partnerUserRef, { coupleId: coupleId });
-      }
-
-      showNotice("Accounts linked successfully!");
-    });
-
-    // Add Milestone Submit
-    document.getElementById('form-timeline').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!userProfile?.coupleId) {
-        showNotice("Connect with your partner first!");
-        return;
-      }
-      const title = document.getElementById('tm-title').value;
-      const date = document.getElementById('tm-date').value;
-      const desc = document.getElementById('tm-desc').value;
-
-      const tmRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'timeline');
-      await addDoc(tmRef, { title, date, desc, createdAt: new Date().toISOString() });
-
-      document.getElementById('modal-timeline').classList.add('hidden');
-      document.getElementById('form-timeline').reset();
-    });
-
-    // Memory Submit
-    document.getElementById('form-memory').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!userProfile?.coupleId) {
-        showNotice("Connect with your partner first!");
-        return;
-      }
-      if (!memoryBase64String) {
-        showNotice("Please select a photo file to upload!");
-        return;
-      }
-
-      const title = document.getElementById('mem-title').value;
-      const caption = document.getElementById('mem-caption').value;
-
-      const memRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'memories');
-      await addDoc(memRef, { 
-        title, 
-        url: memoryBase64String, 
-        caption, 
-        createdAt: new Date().toISOString() 
-      });
-
-      document.getElementById('modal-memory').classList.add('hidden');
-      document.getElementById('form-memory').reset();
-      document.getElementById('mem-file-preview').classList.add('hidden');
-      memoryBase64String = null;
-    });
-
-    // Date Proposal Submit
-    document.getElementById('form-date').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!userProfile?.coupleId) {
-        showNotice("Connect with your partner first!");
-        return;
-      }
-      const title = document.getElementById('dt-title').value;
-      const dateTime = document.getElementById('dt-datetime').value;
-      const location = document.getElementById('dt-location').value;
-      const notes = document.getElementById('dt-notes').value;
-
-      const dateRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'dates');
-      await addDoc(dateRef, {
-        title,
-        dateTime,
-        location,
-        notes,
-        status: 'pending',
-        createdBy: currentUser.uid,
-        createdAt: new Date().toISOString()
-      });
-
-      document.getElementById('modal-date').classList.add('hidden');
-      document.getElementById('form-date').reset();
-    });
-
-    // Date Action Handlers (Accept / Decline)
-    document.getElementById('dates-list').addEventListener('click', async (e) => {
-      const action = e.target.getAttribute('data-action');
-      const id = e.target.getAttribute('data-id');
-      if (!action || !id || !userProfile?.coupleId) return;
-
-      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'dates', id);
-      if (action === 'accept-date') {
-        await updateDoc(docRef, { status: 'accepted' });
-      } else if (action === 'decline-date') {
-        await updateDoc(docRef, { status: 'declined' });
-      }
-    });
-
-    document.querySelectorAll('.nav-tab').forEach(tabBtn => {
-      tabBtn.addEventListener('click', () => {
-        const targetTab = tabBtn.getAttribute('data-tab');
-
-        document.querySelectorAll('.nav-tab').forEach(btn => {
-          btn.classList.remove('active', 'text-rose-600', 'bg-rose-100', 'shadow-sm');
-          btn.classList.add('text-slate-600');
-        });
-        tabBtn.classList.add('active', 'text-rose-600', 'bg-rose-100', 'shadow-sm');
-        tabBtn.classList.remove('text-slate-600');
-
-        document.querySelectorAll('.tab-content').forEach(content => {
-          content.classList.add('hidden');
-        });
-        document.getElementById(targetTab).classList.remove('hidden');
-      });
-    });
-
-    // Modal Triggers
-    document.getElementById('open-timeline-modal').addEventListener('click', () => document.getElementById('modal-timeline').classList.remove('hidden'));
-    document.getElementById('open-memory-modal').addEventListener('click', () => document.getElementById('modal-memory').classList.remove('hidden'));
-    document.getElementById('open-date-modal').addEventListener('click', () => document.getElementById('modal-date').classList.remove('hidden'));
-
-    document.querySelectorAll('[data-close-modal]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-close-modal');
-        document.getElementById(id).classList.add('hidden');
-      });
-    });
-
-    // Copy Code Button
-    document.getElementById('copy-code-btn').addEventListener('click', () => {
-      const input = document.getElementById('my-link-code');
-      input.select();
-      document.execCommand('copy');
-      showNotice("Connection code copied to clipboard!");
-    });
-
-    // Application Initialization
-    window.addEventListener('load', () => {
-      lucide.createIcons();
-      initAuth();
-    });
-  </script>
+  }, console.error));
+  const sub = (name, render, sort) => cUnsubs.push(onSnapshot(col('couples', id, name), s => {
+    const a = []; s.forEach(d => a.push({ id: d.id, ...d.data() })); a.sort(sort); render(a);
+  }, console.error));
+  sub('timeline', renderTimeline, (a, b) => new Date(a.date) - new Date(b.date));
+  sub('memories', renderMemories, (a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+  sub('dates', renderDates, (a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+}
+
+function startCounter() {
+  clearInterval(tick);
+  const upd = () => {
+    const now = new Date(), diff = now - start;
+    if (diff < 0) { CNT.forEach(([k]) => $('cnt-' + k).textContent = '0'); $('cnt-total-days').textContent = '0'; return; }
+    let y = now.getFullYear() - start.getFullYear(), m = now.getMonth() - start.getMonth(), d = now.getDate() - start.getDate();
+    if (d < 0) { m--; d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+    if (m < 0) { y--; m += 12; }
+    const v = { years: y, months: m, days: d, hours: now.getHours(), minutes: now.getMinutes(), seconds: now.getSeconds() };
+    CNT.forEach(([k]) => $('cnt-' + k).textContent = v[k]);
+    $('cnt-total-days').textContent = Math.floor(diff / 864e5);
+  };
+  upd(); tick = setInterval(upd, 1000);
+}
+
+/* ---------- Renderers ---------- */
+function renderTimeline(items) {
+  $('timeline-list').innerHTML = items.length ? items.map(i => `
+    <div class="relative"><div class="absolute -left-[27px] sm:-left-[31px] top-1 w-4 h-4 rounded-full bg-rose-500 border-2 border-white shadow"></div>
+      <div class="glass-panel p-4 rounded-2xl space-y-1"><div class="flex flex-wrap justify-between items-start gap-2">
+        <h4 class="font-bold text-rose-900 text-sm sm:text-base break-words min-w-0">${esc(i.title)}</h4>
+        <span class="text-[11px] font-semibold text-rose-600 bg-rose-100 px-2.5 py-0.5 rounded-full">${esc(i.date)}</span></div>
+        ${i.desc ? `<p class="text-xs text-rose-800 mt-1 break-words">${esc(i.desc)}</p>` : ''}</div></div>`).join('')
+    : '<p class="text-xs text-rose-400 italic">No milestones yet. Tap "Add Event" to create one!</p>';
+}
+function renderMemories(items) {
+  $('memories-grid').innerHTML = items.length ? items.map(i => `
+    <div class="glass-panel rounded-3xl overflow-hidden"><div class="h-48 bg-rose-50"><img src="${i.url}" alt="${esc(i.title)}" loading="lazy" class="w-full h-full object-cover"></div>
+      <div class="p-4 space-y-1"><h4 class="font-bold text-rose-900 text-sm break-words">${esc(i.title)}</h4>
+      ${i.caption ? `<p class="text-xs text-rose-700 break-words">${esc(i.caption)}</p>` : ''}</div></div>`).join('')
+    : '<p class="text-xs text-rose-400 italic col-span-full">No photo memories yet. Tap "Add Photo"!</p>';
+}
+function renderDates(items) {
+  const badge = { accepted: ['bg-emerald-100 text-emerald-700 border-emerald-300', 'Accepted ❤️'], declined: ['bg-rose-100 text-rose-700 border-rose-300', 'Declined'] };
+  $('dates-list').innerHTML = items.length ? items.map(i => {
+    const [bc, bt] = badge[i.status] || ['bg-amber-100 text-amber-700 border-amber-300', 'Pending Response'];
+    const mine = i.createdBy === me?.uid;
+    return `<div class="glass-panel p-5 rounded-3xl space-y-3"><div class="space-y-2">
+      <div class="flex flex-wrap justify-between items-start gap-2"><h4 class="font-bold text-rose-900 text-base break-words min-w-0">${esc(i.title)}</h4><span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${bc}">${bt}</span></div>
+      <div class="text-xs space-y-1"><div class="flex items-center gap-1.5 text-rose-600 font-medium"><i data-lucide="clock" class="w-3.5 h-3.5"></i><span>${new Date(i.dateTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span></div>
+      ${i.location ? `<div class="flex items-center gap-1.5 text-rose-700"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i><span class="break-words min-w-0">${esc(i.location)}</span></div>` : ''}</div>
+      ${i.notes ? `<p class="text-xs text-rose-800 bg-rose-50/80 p-2.5 rounded-2xl border border-rose-200 break-words">${esc(i.notes)}</p>` : ''}</div>
+      ${!mine && i.status === 'pending' ? `<div class="flex gap-2"><button data-action="accept-date" data-id="${i.id}" class="btn btn-g flex-1">Accept Date</button><button data-action="decline-date" data-id="${i.id}" class="btn btn-r flex-1">Decline</button></div>` : ''}</div>`;
+  }).join('') : '<p class="text-xs text-rose-400 italic col-span-full">No date ideas yet. Tap "Propose" to invite your partner!</p>';
+  lucide.createIcons();
+}
+
+/* ---------- Actions ---------- */
+$('user-photo-upload').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f || !me) return;
+  try { await updateDoc(ref('users', me.uid), { photoUrl: await processImage(f, 800, 0.85) }); showNotice('Profile photo updated!'); }
+  catch (err) { showNotice(err.message || 'Error processing photo. Try a different JPG or PNG.'); }
+  e.target.value = '';
+});
+$('mem-file-input').addEventListener('change', async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try { memImg = await processImage(f, 1200, 0.8); $('mem-preview-img').src = memImg; $('mem-file-preview').classList.remove('hidden'); }
+  catch (err) { memImg = null; $('mem-file-preview').classList.add('hidden'); showNotice(err.message || 'Error reading photo. Try a different image.'); }
+});
+$('save-start-date-btn').addEventListener('click', async () => {
+  if (!profile?.coupleId) return showNotice('Please connect with your partner first in the Partner tab!');
+  const v = $('start-date-input').value; if (!v) return;
+  try { await updateDoc(ref('couples', profile.coupleId), { startDate: new Date(v).toISOString() }); showNotice('Relationship start date updated!'); }
+  catch (err) { showNotice('Could not update: ' + (err.message || err)); }
+});
+
+$('link-partner-btn').addEventListener('click', async () => {
+  const code = $('partner-code-input').value.trim();
+  if (!code) return showNotice("Please enter your partner's connection code.");
+  if (code === me.uid) return showNotice('You cannot link your account with yourself!');
+  if (profile?.coupleId) return showNotice("You're already linked. Unlink first to connect with someone new.");
+  const btn = $('link-partner-btn'); btn.disabled = true;
+  try {
+    const pr = ref('users', code), ps = await getDoc(pr);
+    if (!ps.exists()) return showNotice("We couldn't find that code. Double-check it and try again.");
+    if (ps.data().coupleId) return showNotice('That person is already linked with someone else.');
+    const id = [me.uid, code].sort().join('_'), cr = ref('couples', id), partners = [me.uid, code];
+    if ((await getDoc(cr)).exists()) await updateDoc(cr, { partners });   // re-linking restores previous shared data
+    else await setDoc(cr, { partners, createdAt: new Date().toISOString(), startDate: new Date(toLocalDate(new Date())).toISOString() });
+    await updateDoc(ref('users', me.uid), { coupleId: id });
+    await updateDoc(pr, { coupleId: id });
+    $('partner-code-input').value = '';
+    showNotice('Accounts linked successfully!');
+  } catch (err) { showNotice("Couldn't link accounts: " + (err.message || err)); }
+  finally { btn.disabled = false; }
+});
+
+$('confirm-unlink-btn').addEventListener('click', async () => {
+  const id = profile?.coupleId; if (!id) return;
+  const btn = $('confirm-unlink-btn'); btn.disabled = true;
+  try {
+    const pid = (couple?.partners || []).find(x => x !== me.uid);
+    await updateDoc(ref('couples', id), { partners: [], unlinkedAt: new Date().toISOString() });
+    if (pid) await updateDoc(ref('users', pid), { coupleId: null }).catch(() => {});   // partner also self-unlinks via the couple doc if this is blocked
+    await updateDoc(ref('users', me.uid), { coupleId: null });
+    $('modal-unlink').classList.add('hidden');
+    showNotice("You've been unlinked. Your shared memories are saved if you ever link again.");
+  } catch (err) { showNotice("Couldn't unlink: " + (err.message || err)); }
+  finally { btn.disabled = false; }
+});
+
+$('form-timeline').addEventListener('submit', e => {
+  e.preventDefault(); if (!needCouple()) return;
+  save(addDoc(col('couples', profile.coupleId, 'timeline'), { title: $('tm-title').value, date: $('tm-date').value, desc: $('tm-desc').value, createdAt: new Date().toISOString() }));
+  $('modal-timeline').classList.add('hidden'); e.target.reset();
+});
+$('form-memory').addEventListener('submit', e => {
+  e.preventDefault(); if (!needCouple()) return;
+  if (!memImg) return showNotice('Please select a photo to upload!');
+  save(addDoc(col('couples', profile.coupleId, 'memories'), { title: $('mem-title').value, url: memImg, caption: $('mem-caption').value, createdAt: new Date().toISOString() }), 'Could not save photo');
+  $('modal-memory').classList.add('hidden'); e.target.reset(); $('mem-file-preview').classList.add('hidden'); memImg = null;
+});
+$('form-date').addEventListener('submit', e => {
+  e.preventDefault(); if (!needCouple()) return;
+  save(addDoc(col('couples', profile.coupleId, 'dates'), { title: $('dt-title').value, dateTime: $('dt-datetime').value, location: $('dt-location').value, notes: $('dt-notes').value, status: 'pending', createdBy: me.uid, createdAt: new Date().toISOString() }));
+  $('modal-date').classList.add('hidden'); e.target.reset();
+});
+$('dates-list').addEventListener('click', e => {
+  const b = e.target.closest('[data-action]'); if (!b || !profile?.coupleId) return;
+  save(updateDoc(ref('couples', profile.coupleId, 'dates', b.dataset.id), { status: b.dataset.action === 'accept-date' ? 'accepted' : 'declined' }));
+});
+
+$('copy-code-btn').addEventListener('click', async () => {
+  const i = $('my-link-code');
+  try { await navigator.clipboard.writeText(i.value); }
+  catch { i.select(); i.setSelectionRange(0, 99999); document.execCommand('copy'); }
+  showNotice('Connection code copied to clipboard!');
+});
+
+switchTab('tab-counter');
+setPartner(null, 'Not connected to a partner yet.');
+lucide.createIcons();
+</script>
 </body>
 </html>
