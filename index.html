@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our Love Journey - Relationship Tracker</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            rose: {
+              50: '#fff1f2',
+              100: '#ffe4e6',
+              200: '#fecdd3',
+              300: '#fda4af',
+              400: '#fb7185',
+              500: '#f43f5e',
+              600: '#e11d48',
+            },
+            pastel: {
+              pink: '#fff0f3',
+              card: 'rgba(255, 255, 255, 0.85)',
+              border: 'rgba(251, 113, 133, 0.3)',
+              accent: '#ff85a2',
+              shadow: 'rgba(244, 63, 94, 0.12)'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            serif: ['Playfair Display', 'serif']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    body {
+      background-color: #fff0f5;
+      color: #4a2c35;
+      font-family: 'Inter', sans-serif;
+      overflow-x: hidden;
+    }
+    canvas#hearts-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(251, 113, 133, 0.25);
+      box-shadow: 0 10px 30px -5px rgba(244, 63, 94, 0.12);
+    }
+    .glass-input {
+      background: rgba(255, 255, 255, 0.9);
+      border: 1px solid rgba(251, 113, 133, 0.4);
+      color: #4a2c35;
+    }
+    .glass-input:focus {
+      border-color: #f43f5e;
+      outline: none;
+      box-shadow: 0 0 10px rgba(244, 63, 94, 0.2);
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 240, 245, 0.8);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(251, 113, 133, 0.5);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(244, 63, 94, 0.8);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col relative antialiased">
+
+  <!-- Animated Floating Hearts Canvas -->
+  <canvas id="hearts-canvas"></canvas>
+
+  <div class="relative z-10 flex flex-col min-h-screen">
+    <header class="sticky top-0 z-40 glass-panel border-b border-rose-200/60 px-4 py-3 shadow-sm">
+      <div class="max-w-6xl mx-auto flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center animate-bounce">
+            <i data-lucide="heart" class="w-6 h-6 fill-rose-500"></i>
+          </div>
+          <span class="font-serif text-xl sm:text-2xl font-bold text-rose-600 tracking-tight">
+            Our Love Story
+          </span>
+        </div>
+
+        <div id="nav-user-bar" class="hidden flex items-center space-x-4">
+          <div class="text-right hidden sm:block">
+            <div id="nav-user-name" class="text-sm font-semibold text-rose-900">Loading...</div>
+            <div id="nav-partner-status" class="text-xs text-rose-500">Checking connection...</div>
+          </div>
+          <button id="logout-btn" title="Sign Out" class="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-100/60 rounded-xl transition">
+            <i data-lucide="log-out" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Navigation Tabs -->
+    <nav id="main-nav" class="hidden glass-panel border-b border-rose-200/40 px-2 py-2">
+      <div class="max-w-4xl mx-auto flex justify-around sm:justify-center sm:space-x-8 text-xs sm:text-sm font-semibold">
+        <button data-tab="tab-counter" class="nav-tab active flex items-center space-x-2 px-3 py-2 rounded-xl text-rose-600 bg-rose-100 transition shadow-sm">
+          <i data-lucide="clock" class="w-4 h-4"></i>
+          <span>Counter</span>
+        </button>
+        <button data-tab="tab-timeline" class="nav-tab flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-600 hover:text-rose-600 transition">
+          <i data-lucide="git-commit" class="w-4 h-4"></i>
+          <span>Timeline</span>
+        </button>
+        <button data-tab="tab-memories" class="nav-tab flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-600 hover:text-rose-600 transition">
+          <i data-lucide="image" class="w-4 h-4"></i>
+          <span>Memories</span>
+        </button>
+        <button data-tab="tab-dates" class="nav-tab flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-600 hover:text-rose-600 transition">
+          <i data-lucide="calendar" class="w-4 h-4"></i>
+          <span>Dates</span>
+        </button>
+        <button data-tab="tab-settings" class="nav-tab flex items-center space-x-2 px-3 py-2 rounded-xl text-slate-600 hover:text-rose-600 transition">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          <span>Partner</span>
+        </button>
+      </div>
+    </nav>
+
+    <main class="flex-grow max-w-5xl w-full mx-auto p-4 sm:p-6">
+
+      <!-- Auth Box View -->
+      <div id="auth-view" class="max-w-md mx-auto my-12 glass-panel p-6 sm:p-8 rounded-3xl shadow-xl">
+        <div class="text-center mb-6">
+          <div class="w-16 h-16 mx-auto mb-3 bg-rose-100 text-rose-500 rounded-full flex items-center justify-center">
+            <i data-lucide="sparkles" class="w-8 h-8"></i>
+          </div>
+          <h2 class="text-2xl font-serif font-bold text-rose-800">Welcome Lovers</h2>
+          <p class="text-xs text-rose-600/80 mt-1">Sign in or create your couple account to track your memories</p>
+        </div>
+
+        <form id="auth-form" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-rose-800 mb-1">Your Name</label>
+            <input type="text" id="auth-name" required placeholder="e.g. Alex" class="w-full px-4 py-2.5 rounded-xl glass-input text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-rose-800 mb-1">Email Address</label>
+            <input type="email" id="auth-email" required placeholder="alex@love.com" class="w-full px-4 py-2.5 rounded-xl glass-input text-sm">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-rose-800 mb-1">Password</label>
+            <input type="password" id="auth-password" required placeholder="••••••••" class="w-full px-4 py-2.5 rounded-xl glass-input text-sm">
+          </div>
+
+          <div id="auth-error" class="hidden text-xs text-rose-600 bg-rose-50 p-3 rounded-xl border border-rose-200"></div>
+
+          <button type="submit" id="auth-submit-btn" class="w-full py-3 bg-gradient-to-r from-rose-400 to-pink-500 hover:from-rose-500 hover:to-pink-600 text-white font-semibold rounded-xl shadow-lg shadow-rose-300 transition transform active:scale-95 text-sm flex justify-center items-center">
+            <span>Sign In / Create Account</span>
+          </button>
+        </form>
+      </div>
+
+      <div id="app-content" class="hidden space-y-6">
+
+        <!-- TAB 1: COUNTER & PROFILES -->
+        <section id="tab-counter" class="tab-content block space-y-6">
+          <div class="glass-panel p-6 sm:p-8 rounded-3xl text-center relative overflow-hidden">
+            <!-- Profile Photo Avatars -->
+            <div class="flex items-center justify-center space-x-4 sm:space-x-12 my-2">
+              
+              <!-- User Profile Picture -->
+              <div class="text-center group relative">
+                <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-rose-100 border-4 border-rose-300 flex items-center justify-center mx-auto text-3xl font-serif text-rose-500 shadow-md overflow-hidden" id="card-user-avatar-container">
+                  <img id="card-user-img" src="" class="hidden w-full h-full object-cover" />
+                  <span id="card-user-avatar-text">Y</span>
+                </div>
+                <label for="user-photo-upload" class="mt-2 inline-flex items-center space-x-1 text-xs text-rose-600 bg-rose-100 hover:bg-rose-200 px-2.5 py-1 rounded-full cursor-pointer transition font-medium">
+                  <i data-lucide="camera" class="w-3 h-3"></i>
+                  <span>Change Photo</span>
+                </label>
+                <input type="file" id="user-photo-upload" accept="image/*" class="hidden">
+                <div id="card-user-name" class="mt-1 text-sm sm:text-base font-bold text-rose-900">You</div>
+              </div>
+
+              <!-- Animated Heart Icon -->
+              <div class="flex flex-col items-center">
+                <div class="p-3 bg-rose-500 text-white rounded-full shadow-lg shadow-rose-300 animate-pulse">
+                  <i data-lucide="heart" class="w-6 h-6 sm:w-8 sm:h-8 fill-white"></i>
+                </div>
+                <span class="text-[10px] text-rose-500 uppercase tracking-widest mt-1.5 font-bold">In Love</span>
+              </div>
+
+              <!-- Partner Profile Picture -->
+              <div class="text-center group relative">
+                <div class="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-rose-100 border-4 border-rose-300 flex items-center justify-center mx-auto text-3xl font-serif text-rose-500 shadow-md overflow-hidden" id="card-partner-avatar-container">
+                  <img id="card-partner-img" src="" class="hidden w-full h-full object-cover" />
+                  <span id="card-partner-avatar-text">P</span>
+                </div>
+                <div class="mt-2 text-xs text-rose-400 font-medium">Partner</div>
+                <div id="card-partner-name" class="mt-1 text-sm sm:text-base font-bold text-rose-900">Partner</div>
+              </div>
+
+            </div>
+
+            <!-- Anniversary Start Date Setter -->
+            <div class="mt-6 inline-flex flex-col items-center bg-rose-50/60 p-4 rounded-2xl border border-rose-200/60">
+              <span class="text-xs text-rose-600 uppercase tracking-wider font-semibold mb-2">Our Relationship Started On</span>
+              <div class="flex items-center space-x-2">
+                <input type="date" id="start-date-input" class="glass-input px-3 py-1.5 rounded-xl text-sm text-center font-medium">
+                <button id="save-start-date-btn" class="px-4 py-1.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold transition shadow-md shadow-rose-300">
+                  Update
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Live Counter Grid -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4">
+            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
+              <div id="cnt-years" class="text-3xl sm:text-4xl font-bold text-rose-600 font-serif">0</div>
+              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Years</div>
+            </div>
+            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
+              <div id="cnt-months" class="text-3xl sm:text-4xl font-bold text-rose-500 font-serif">0</div>
+              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Months</div>
+            </div>
+            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
+              <div id="cnt-days" class="text-3xl sm:text-4xl font-bold text-rose-600 font-serif">0</div>
+              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Days</div>
+            </div>
+            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
+              <div id="cnt-hours" class="text-3xl sm:text-4xl font-bold text-pink-600 font-serif">0</div>
+              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Hours</div>
+            </div>
+            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
+              <div id="cnt-minutes" class="text-3xl sm:text-4xl font-bold text-pink-500 font-serif">0</div>
+              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Minutes</div>
+            </div>
+            <div class="glass-panel p-4 rounded-2xl text-center border-rose-200">
+              <div id="cnt-seconds" class="text-3xl sm:text-4xl font-bold text-rose-600 font-serif">0</div>
+              <div class="text-[10px] uppercase tracking-widest font-bold text-rose-400 mt-1">Seconds</div>
+            </div>
+          </div>
+
+          <!-- Total Days Banner -->
+          <div class="glass-panel p-4 rounded-2xl text-center">
+            <span class="text-sm font-medium text-rose-800">Total togetherness: </span>
+            <span id="cnt-total-days" class="text-lg font-bold text-rose-600">0</span>
+            <span class="text-sm font-medium text-rose-800"> wonderful days! 💕</span>
+          </div>
+        </section>
+
+        <section id="tab-timeline" class="tab-content hidden space-y-6">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="text-xl font-serif font-bold text-rose-800">Our Milestones</h3>
+              <p class="text-xs text-rose-500">Important dates and memories in our relationship</p>
+            </div>
+            <button id="open-timeline-modal" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition shadow-md shadow-rose-200">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>Add Event</span>
+            </button>
+          </div>
+
+          <div class="relative border-l-2 border-rose-300 ml-4 sm:ml-8 pl-6 space-y-6 py-2" id="timeline-list">
+            <div class="text-rose-400 text-sm italic">Loading timeline milestones...</div>
+          </div>
+        </section>
+
+        <section id="tab-memories" class="tab-content hidden space-y-6">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="text-xl font-serif font-bold text-rose-800">Photo Memories</h3>
+              <p class="text-xs text-rose-500">Upload photos of your favorite dates and moments together</p>
+            </div>
+            <button id="open-memory-modal" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition shadow-md shadow-rose-200">
+              <i data-lucide="camera" class="w-4 h-4"></i>
+              <span>Add Memory Photo</span>
+            </button>
+          </div>
+
+          <div id="memories-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            <div class="text-rose-400 text-sm italic col-span-full">Loading uploaded photo memories...</div>
+          </div>
+        </section>
+
+        <section id="tab-dates" class="tab-content hidden space-y-6">
+          <div class="flex justify-between items-center">
+            <div>
+              <h3 class="text-xl font-serif font-bold text-rose-800">Date Night Scheduler</h3>
+              <p class="text-xs text-rose-500">Propose date ideas for your partner to accept</p>
+            </div>
+            <button id="open-date-modal" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-2 transition shadow-md shadow-rose-200">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>Propose Date</span>
+            </button>
+          </div>
+
+          <div id="dates-list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="text-rose-400 text-sm italic col-span-full">Loading proposed dates...</div>
+          </div>
+        </section>
+
+        <section id="tab-settings" class="tab-content hidden space-y-6 max-w-xl mx-auto">
+          <div class="glass-panel p-6 rounded-3xl space-y-6">
+            <h3 class="text-xl font-serif font-bold text-rose-800 flex items-center space-x-2">
+              <i data-lucide="user-plus" class="w-5 h-5 text-rose-500"></i>
+              <span>Connect With Your Partner</span>
+            </h3>
+
+            <div class="space-y-2">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-rose-800">Your Connection Code</label>
+              <div class="flex items-center space-x-2">
+                <input type="text" id="my-link-code" readonly class="w-full glass-input px-4 py-2.5 rounded-xl text-sm font-mono text-rose-700 font-bold select-all">
+                <button id="copy-code-btn" class="px-4 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl text-xs font-semibold transition border border-rose-300 flex items-center space-x-1">
+                  <i data-lucide="copy" class="w-4 h-4"></i>
+                  <span>Copy</span>
+                </button>
+              </div>
+              <p class="text-[11px] text-rose-500">Send this code to your girlfriend or boyfriend so they can link with you!</p>
+            </div>
+
+            <hr class="border-rose-200">
+
+            <div class="space-y-3">
+              <label class="block text-xs font-semibold uppercase tracking-wider text-rose-800">Connect to Partner</label>
+              <div class="flex items-center space-x-2">
+                <input type="text" id="partner-code-input" placeholder="Paste partner's connection code..." class="w-full glass-input px-4 py-2.5 rounded-xl text-sm">
+                <button id="link-partner-btn" class="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold transition flex items-center space-x-1 shadow-md shadow-rose-200 whitespace-nowrap">
+                  <i data-lucide="link" class="w-4 h-4"></i>
+                  <span>Connect</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="partner-status-box" class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 space-y-1">
+              <span class="font-semibold text-rose-600">Status:</span> Not connected yet.
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  
+  <!-- Add Milestone Modal -->
+  <div id="modal-timeline" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-rose-950/40 backdrop-blur-sm">
+    <div class="glass-panel w-full max-w-md p-6 rounded-3xl shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-serif font-bold text-rose-800">Add Milestone</h3>
+        <button data-close-modal="modal-timeline" class="text-rose-400 hover:text-rose-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="form-timeline" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-rose-800 mb-1">Title</label>
+          <input type="text" id="tm-title" required placeholder="e.g. First Date, Moved In Together" class="w-full glass-input px-3 py-2 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-rose-800 mb-1">Date</label>
+          <input type="date" id="tm-date" required class="w-full glass-input px-3 py-2 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-rose-800 mb-1">Description / Notes</label>
+          <textarea id="tm-desc" rows="3" placeholder="What made this moment unforgettable?" class="w-full glass-input px-3 py-2 rounded-xl text-sm"></textarea>
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold shadow-md transition">Save Milestone</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Add Memory Upload Modal -->
+  <div id="modal-memory" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-rose-950/40 backdrop-blur-sm">
+    <div class="glass-panel w-full max-w-md p-6 rounded-3xl shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-serif font-bold text-rose-800">Add Photo Memory</h3>
+        <button data-close-modal="modal-memory" class="text-rose-400 hover:text-rose-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="form-memory" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-rose-800 mb-1">Memory Title</label>
+          <input type="text" id="mem-title" required placeholder="e.g. Summer Beach Trip" class="w-full glass-input px-3 py-2 rounded-xl text-sm">
+        </div>
+        
+        <!-- File Input for Memory Image -->
+        <div>
+          <label class="block text-xs font-semibold text-rose-800 mb-1">Upload Photo File</label>
+          <input type="file" id="mem-file-input" accept="image/*" class="w-full text-xs text-rose-700 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-rose-100 file:text-rose-700 hover:file:bg-rose-200 cursor-pointer">
+          <div id="mem-file-preview" class="hidden mt-2 h-32 rounded-xl overflow-hidden border border-rose-200">
+            <img id="mem-preview-img" src="" class="w-full h-full object-cover">
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-rose-800 mb-1">Caption / Story</label>
+          <textarea id="mem-caption" rows="2" placeholder="Write a cute note about this memory..." class="w-full glass-input px-3 py-2 rounded-xl text-sm"></textarea>
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold shadow-md transition">Upload Memory</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Propose Date Modal -->
+  <div id="modal-date" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-rose-950/40 backdrop-blur-sm">
+    <div class="glass-panel w-full max-w-md p-6 rounded-3xl shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-serif font-bold text-rose-800">Propose a Date Night</h3>
+        <button data-close-modal="modal-date" class="text-rose-400 hover:text-rose-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <form id="form-date" class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-rose-800 mb-1">Date Idea Title</label>
+          <input type="text" id="dt-title" required placeholder="e.g. Picnic at the Park, Movie & Pizza" class="w-full glass-input px-3 py-2 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-rose-800 mb-1">Date & Time</label>
+          <input type="datetime-local" id="dt-datetime" required class="w-full glass-input px-3 py-2 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-rose-800 mb-1">Location</label>
+          <input type="text" id="dt-location" placeholder="e.g. Favorite Italian Restaurant" class="w-full glass-input px-3 py-2 rounded-xl text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-rose-800 mb-1">Details / Notes</label>
+          <textarea id="dt-notes" rows="2" placeholder="Wear something nice!" class="w-full glass-input px-3 py-2 rounded-xl text-sm"></textarea>
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-semibold shadow-md transition">Send Date Proposal</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom Notification Notice -->
+  <div id="modal-notify" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-rose-950/40 backdrop-blur-sm">
+    <div class="glass-panel w-full max-w-xs p-5 rounded-2xl text-center space-y-3 shadow-2xl">
+      <div class="w-10 h-10 mx-auto rounded-full bg-rose-100 text-rose-500 flex items-center justify-center">
+        <i data-lucide="heart" class="w-5 h-5 fill-rose-500"></i>
+      </div>
+      <div id="notify-message" class="text-sm font-semibold text-rose-900">Notice message</div>
+      <button id="notify-close-btn" class="w-full py-2 bg-rose-500 text-white rounded-xl text-xs font-semibold shadow-md">OK</button>
+    </div>
+  </div>
+
+  <script>
+    (function initFloatingHearts() {
+      const canvas = document.getElementById('hearts-canvas');
+      const ctx = canvas.getContext('2d');
+      let width = canvas.width = window.innerWidth;
+      let height = canvas.height = window.innerHeight;
+
+      window.addEventListener('resize', () => {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      });
+
+      const hearts = Array.from({ length: 28 }, () => ({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        size: Math.random() * 14 + 8,
+        speedY: Math.random() * 0.8 + 0.3,
+        speedX: Math.sin(Math.random() * Math.PI) * 0.4,
+        opacity: Math.random() * 0.4 + 0.2,
+        swing: Math.random() * 0.02
+      }));
+
+      function drawHeart(x, y, size, opacity) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.fillStyle = `rgba(244, 63, 94, ${opacity})`;
+        const topCurveHeight = size * 0.3;
+        ctx.moveTo(x, y + topCurveHeight);
+        ctx.bezierCurveTo(x, y, x - size / 2, y, x - size / 2, y + topCurveHeight);
+        ctx.bezierCurveTo(x - size / 2, y + (size + topCurveHeight) / 2, x, y + size, x, y + size);
+        ctx.bezierCurveTo(x, y + size, x + size / 2, y + (size + topCurveHeight) / 2, x + size / 2, y + topCurveHeight);
+        ctx.bezierCurveTo(x + size / 2, y, x, y, x, y + topCurveHeight);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, width, height);
+        hearts.forEach(h => {
+          h.y -= h.speedY;
+          h.x += Math.sin(h.y * h.swing) * 0.5;
+          if (h.y < -30) {
+            h.y = height + 20;
+            h.x = Math.random() * width;
+          }
+          drawHeart(h.x, h.y, h.size, h.opacity);
+        });
+        requestAnimationFrame(render);
+      }
+      render();
+    })();
+  </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+    import { 
+      getAuth, 
+      signInWithCustomToken, 
+      signInAnonymously, 
+      createUserWithEmailAndPassword, 
+      signInWithEmailAndPassword, 
+      signOut, 
+      onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+    import { 
+      getFirestore, 
+      doc, 
+      setDoc, 
+      getDoc, 
+      updateDoc, 
+      collection, 
+      addDoc, 
+      onSnapshot 
+    } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+
+    // Application ID and Configuration
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'relationship-tracker-app';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' 
+      ? JSON.parse(__firebase_config) 
+      : {
+          apiKey: "demo-api-key",
+          authDomain: "demo.firebaseapp.com",
+          projectId: "demo-project",
+          storageBucket: "demo.appspot.com",
+          messagingSenderId: "123456789",
+          appId: "1:123456789:web:abcdef"
+        };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Global App State
+    let currentUser = null;
+    let userProfile = null;
+    let partnerProfile = null;
+    let coupleData = null;
+    let relationshipStartDate = new Date();
+    let counterInterval = null;
+    let memoryBase64String = null;
+    let unsubs = [];
+
+    function showNotice(msg) {
+      document.getElementById('notify-message').innerText = msg;
+      document.getElementById('modal-notify').classList.remove('hidden');
+    }
+    document.getElementById('notify-close-btn').addEventListener('click', () => {
+      document.getElementById('modal-notify').classList.add('hidden');
+    });
+
+    // Helper: Convert File to Base64 String
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function initAuth() {
+      if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+        try {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } catch (e) {
+          await signInAnonymously(auth);
+        }
+      }
+
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          currentUser = user;
+          document.getElementById('auth-view').classList.add('hidden');
+          document.getElementById('app-content').classList.remove('hidden');
+          document.getElementById('nav-user-bar').classList.remove('hidden');
+          document.getElementById('main-nav').classList.remove('hidden');
+
+          await syncUserProfile();
+        } else {
+          currentUser = null;
+          userProfile = null;
+          partnerProfile = null;
+          coupleData = null;
+          cleanupListeners();
+          document.getElementById('auth-view').classList.remove('hidden');
+          document.getElementById('app-content').classList.add('hidden');
+          document.getElementById('nav-user-bar').classList.add('hidden');
+          document.getElementById('main-nav').classList.add('hidden');
+        }
+      });
+    }
+
+    function cleanupListeners() {
+      unsubs.forEach(unsub => unsub());
+      unsubs = [];
+    }
+
+    async function syncUserProfile() {
+      if (!currentUser) return;
+      const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
+      
+      const unsubUser = onSnapshot(userDocRef, async (snap) => {
+        if (snap.exists()) {
+          userProfile = snap.data();
+        } else {
+          const defaultName = document.getElementById('auth-name').value || 'Partner';
+          userProfile = {
+            uid: currentUser.uid,
+            displayName: defaultName,
+            photoUrl: null,
+            coupleId: null,
+            createdAt: new Date().toISOString()
+          };
+          await setDoc(userDocRef, userProfile);
+        }
+
+        // Render User Avatar and Info
+        document.getElementById('nav-user-name').innerText = userProfile.displayName || 'You';
+        document.getElementById('card-user-name').innerText = userProfile.displayName || 'You';
+        document.getElementById('my-link-code').value = currentUser.uid;
+
+        if (userProfile.photoUrl) {
+          document.getElementById('card-user-img').src = userProfile.photoUrl;
+          document.getElementById('card-user-img').classList.remove('hidden');
+          document.getElementById('card-user-avatar-text').classList.add('hidden');
+        } else {
+          document.getElementById('card-user-avatar-text').innerText = (userProfile.displayName || 'Y').charAt(0).toUpperCase();
+        }
+
+        if (userProfile.coupleId) {
+          syncCoupleData(userProfile.coupleId);
+        } else {
+          updatePartnerUI(null, "Not connected to a partner yet.");
+        }
+      });
+
+      unsubs.push(unsubUser);
+    }
+
+    function syncCoupleData(coupleId) {
+      const coupleDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId);
+
+      const unsubCouple = onSnapshot(coupleDocRef, (snap) => {
+        if (snap.exists()) {
+          coupleData = snap.data();
+          const partnerUid = coupleData.partners.find(id => id !== currentUser.uid);
+
+          if (partnerUid) {
+            const partnerDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', partnerUid);
+            getDoc(partnerDocRef).then(pSnap => {
+              if (pSnap.exists()) {
+                partnerProfile = pSnap.data();
+                updatePartnerUI(partnerProfile, `Connected with ${partnerProfile.displayName}`);
+              }
+            });
+          }
+
+          if (coupleData.startDate) {
+            relationshipStartDate = new Date(coupleData.startDate);
+            document.getElementById('start-date-input').value = coupleData.startDate.split('T')[0];
+            startCounter();
+          }
+
+          syncSubcollections(coupleId);
+        }
+      });
+
+      unsubs.push(unsubCouple);
+    }
+
+    function updatePartnerUI(partner, statusText) {
+      document.getElementById('nav-partner-status').innerText = statusText;
+      document.getElementById('partner-status-box').innerHTML = `<span class="font-semibold text-rose-600">Status:</span> ${statusText}`;
+
+      if (partner) {
+        document.getElementById('card-partner-name').innerText = partner.displayName || 'Partner';
+        if (partner.photoUrl) {
+          document.getElementById('card-partner-img').src = partner.photoUrl;
+          document.getElementById('card-partner-img').classList.remove('hidden');
+          document.getElementById('card-partner-avatar-text').classList.add('hidden');
+        } else {
+          document.getElementById('card-partner-avatar-text').innerText = (partner.displayName || 'P').charAt(0).toUpperCase();
+        }
+      } else {
+        document.getElementById('card-partner-name').innerText = 'Partner';
+        document.getElementById('card-partner-avatar-text').innerText = '?';
+      }
+    }
+
+    function syncSubcollections(coupleId) {
+      // Timeline
+      const tmRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'timeline');
+      const unsubTm = onSnapshot(tmRef, (snap) => {
+        const items = [];
+        snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+        items.sort((a, b) => new Date(a.date) - new Date(b.date));
+        renderTimeline(items);
+      });
+
+      // Memories (Photos)
+      const memRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'memories');
+      const unsubMem = onSnapshot(memRef, (snap) => {
+        const items = [];
+        snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+        renderMemories(items);
+      });
+
+      // Date Scheduler
+      const dateRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId, 'dates');
+      const unsubDate = onSnapshot(dateRef, (snap) => {
+        const items = [];
+        snap.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+        items.sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+        renderDates(items);
+      });
+
+      unsubs.push(unsubTm, unsubMem, unsubDate);
+    }
+
+    function startCounter() {
+      if (counterInterval) clearInterval(counterInterval);
+
+      function update() {
+        const now = new Date();
+        const diffMs = now - relationshipStartDate;
+
+        if (diffMs < 0) {
+          ['cnt-years','cnt-months','cnt-days','cnt-hours','cnt-minutes','cnt-seconds','cnt-total-days'].forEach(id => {
+            document.getElementById(id).innerText = '0';
+          });
+          return;
+        }
+
+        const totalDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        let years = now.getFullYear() - relationshipStartDate.getFullYear();
+        let months = now.getMonth() - relationshipStartDate.getMonth();
+        let days = now.getDate() - relationshipStartDate.getDate();
+
+        if (days < 0) {
+          months -= 1;
+          const lastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+          days += lastMonth.getDate();
+        }
+        if (months < 0) {
+          years -= 1;
+          months += 12;
+        }
+
+        document.getElementById('cnt-years').innerText = years;
+        document.getElementById('cnt-months').innerText = months;
+        document.getElementById('cnt-days').innerText = days;
+        document.getElementById('cnt-hours').innerText = now.getHours();
+        document.getElementById('cnt-minutes').innerText = now.getMinutes();
+        document.getElementById('cnt-seconds').innerText = now.getSeconds();
+        document.getElementById('cnt-total-days').innerText = totalDays;
+      }
+
+      update();
+      counterInterval = setInterval(update, 1000);
+    }
+
+    function renderTimeline(items) {
+      const container = document.getElementById('timeline-list');
+      if (items.length === 0) {
+        container.innerHTML = `<p class="text-xs text-rose-400 italic">No milestones added yet. Click "Add Event" to create one!</p>`;
+        return;
+      }
+
+      container.innerHTML = items.map(item => `
+        <div class="relative group">
+          <div class="absolute -left-[31px] top-1 w-4 h-4 rounded-full bg-rose-500 border-2 border-white shadow"></div>
+          <div class="glass-panel p-4 rounded-2xl space-y-1">
+            <div class="flex justify-between items-start">
+              <h4 class="font-bold text-rose-900 text-sm sm:text-base">${escapeHtml(item.title)}</h4>
+              <span class="text-[11px] font-semibold text-rose-600 bg-rose-100 px-2.5 py-0.5 rounded-full">${item.date}</span>
+            </div>
+            ${item.desc ? `<p class="text-xs text-rose-800 mt-1">${escapeHtml(item.desc)}</p>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderMemories(items) {
+      const container = document.getElementById('memories-grid');
+      if (items.length === 0) {
+        container.innerHTML = `<p class="text-xs text-rose-400 italic col-span-full">No photo memories uploaded yet. Click "Add Memory Photo"!</p>`;
+        return;
+      }
+
+      container.innerHTML = items.map(item => `
+        <div class="glass-panel rounded-3xl overflow-hidden group hover:border-rose-400 transition shadow-sm">
+          <div class="h-48 overflow-hidden bg-rose-50 relative">
+            <img src="${item.url}" alt="${escapeHtml(item.title)}" 
+                 class="w-full h-full object-cover group-hover:scale-105 transition duration-300">
+          </div>
+          <div class="p-4 space-y-1">
+            <h4 class="font-bold text-rose-900 text-sm">${escapeHtml(item.title)}</h4>
+            ${item.caption ? `<p class="text-xs text-rose-700 line-clamp-2">${escapeHtml(item.caption)}</p>` : ''}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderDates(items) {
+      const container = document.getElementById('dates-list');
+      if (items.length === 0) {
+        container.innerHTML = `<p class="text-xs text-rose-400 italic col-span-full">No date ideas proposed yet. Click "Propose Date" to invite your partner!</p>`;
+        return;
+      }
+
+      container.innerHTML = items.map(item => {
+        const isProposedByMe = item.createdBy === currentUser.uid;
+        let statusBadge = '';
+        if (item.status === 'accepted') {
+          statusBadge = `<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">Accepted ❤️</span>`;
+        } else if (item.status === 'declined') {
+          statusBadge = `<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-700 border border-rose-300">Declined</span>`;
+        } else {
+          statusBadge = `<span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-300">Pending Response</span>`;
+        }
+
+        const dateFormatted = new Date(item.dateTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+
+        return `
+          <div class="glass-panel p-5 rounded-3xl space-y-3 flex flex-col justify-between">
+            <div class="space-y-2">
+              <div class="flex justify-between items-start">
+                <h4 class="font-bold text-rose-900 text-base">${escapeHtml(item.title)}</h4>
+                ${statusBadge}
+              </div>
+              <div class="text-xs text-rose-800 space-y-1">
+                <div class="flex items-center space-x-1.5 text-rose-600 font-medium">
+                  <i data-lucide="clock" class="w-3.5 h-3.5"></i>
+                  <span>${dateFormatted}</span>
+                </div>
+                ${item.location ? `
+                  <div class="flex items-center space-x-1.5 text-rose-700">
+                    <i data-lucide="map-pin" class="w-3.5 h-3.5"></i>
+                    <span>${escapeHtml(item.location)}</span>
+                  </div>
+                ` : ''}
+              </div>
+              ${item.notes ? `<p class="text-xs text-rose-800 bg-rose-50/80 p-2.5 rounded-2xl border border-rose-200">${escapeHtml(item.notes)}</p>` : ''}
+            </div>
+
+            ${!isProposedByMe && item.status === 'pending' ? `
+              <div class="flex space-x-2 pt-2">
+                <button data-action="accept-date" data-id="${item.id}" class="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-semibold shadow-md transition">Accept Date</button>
+                <button data-action="decline-date" data-id="${item.id}" class="flex-1 py-2 bg-rose-400 hover:bg-rose-500 text-white rounded-xl text-xs font-semibold shadow-md transition">Decline</button>
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    
+    // User Profile Photo Upload
+    document.getElementById('user-photo-upload').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file || !currentUser) return;
+
+      try {
+        const base64Photo = await readFileAsBase64(file);
+        const userDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
+        await updateDoc(userDocRef, { photoUrl: base64Photo });
+        showNotice("Profile photo updated successfully!");
+      } catch (err) {
+        showNotice("Error uploading profile photo.");
+      }
+    });
+
+    // Memory Image File Selection
+    document.getElementById('mem-file-input').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      try {
+        memoryBase64String = await readFileAsBase64(file);
+        document.getElementById('mem-preview-img').src = memoryBase64String;
+        document.getElementById('mem-file-preview').classList.remove('hidden');
+      } catch (err) {
+        showNotice("Error reading memory photo file.");
+      }
+    });
+
+    // Auth Form
+    document.getElementById('auth-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-password').value;
+      const errBox = document.getElementById('auth-error');
+      errBox.classList.add('hidden');
+
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+      } catch (err) {
+        try {
+          await createUserWithEmailAndPassword(auth, email, pass);
+        } catch (createErr) {
+          errBox.innerText = createErr.message;
+          errBox.classList.remove('hidden');
+        }
+      }
+    });
+
+    document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+
+    // Anniversary Start Date Update
+    document.getElementById('save-start-date-btn').addEventListener('click', async () => {
+      if (!userProfile?.coupleId) {
+        showNotice("Please connect with your partner first in the Partner settings tab!");
+        return;
+      }
+      const val = document.getElementById('start-date-input').value;
+      if (!val) return;
+
+      const coupleDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId);
+      await updateDoc(coupleDocRef, { startDate: new Date(val).toISOString() });
+      showNotice("Relationship start date updated!");
+    });
+
+    // Partner Linking Code
+    document.getElementById('link-partner-btn').addEventListener('click', async () => {
+      const targetCode = document.getElementById('partner-code-input').value.trim();
+      if (!targetCode || targetCode === currentUser.uid) {
+        showNotice("Please enter a valid partner connection code.");
+        return;
+      }
+
+      const coupleId = [currentUser.uid, targetCode].sort().join('_');
+      const coupleDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', coupleId);
+
+      await setDoc(coupleDocRef, {
+        partners: [currentUser.uid, targetCode],
+        createdAt: new Date().toISOString(),
+        startDate: new Date().toISOString()
+      }, { merge: true });
+
+      const myUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', currentUser.uid);
+      await updateDoc(myUserRef, { coupleId: coupleId });
+
+      const partnerUserRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', targetCode);
+      const partnerSnap = await getDoc(partnerUserRef);
+      if (partnerSnap.exists()) {
+        await updateDoc(partnerUserRef, { coupleId: coupleId });
+      }
+
+      showNotice("Connected with partner!");
+    });
+
+    // Add Milestone Submit
+    document.getElementById('form-timeline').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!userProfile?.coupleId) {
+        showNotice("Connect with your partner first!");
+        return;
+      }
+      const title = document.getElementById('tm-title').value;
+      const date = document.getElementById('tm-date').value;
+      const desc = document.getElementById('tm-desc').value;
+
+      const tmRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'timeline');
+      await addDoc(tmRef, { title, date, desc, createdAt: new Date().toISOString() });
+
+      document.getElementById('modal-timeline').classList.add('hidden');
+      document.getElementById('form-timeline').reset();
+    });
+
+    // Memory Submit
+    document.getElementById('form-memory').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!userProfile?.coupleId) {
+        showNotice("Connect with your partner first!");
+        return;
+      }
+      if (!memoryBase64String) {
+        showNotice("Please select a photo file to upload!");
+        return;
+      }
+
+      const title = document.getElementById('mem-title').value;
+      const caption = document.getElementById('mem-caption').value;
+
+      const memRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'memories');
+      await addDoc(memRef, { 
+        title, 
+        url: memoryBase64String, 
+        caption, 
+        createdAt: new Date().toISOString() 
+      });
+
+      document.getElementById('modal-memory').classList.add('hidden');
+      document.getElementById('form-memory').reset();
+      document.getElementById('mem-file-preview').classList.add('hidden');
+      memoryBase64String = null;
+    });
+
+    // Date Proposal Submit
+    document.getElementById('form-date').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!userProfile?.coupleId) {
+        showNotice("Connect with your partner first!");
+        return;
+      }
+      const title = document.getElementById('dt-title').value;
+      const dateTime = document.getElementById('dt-datetime').value;
+      const location = document.getElementById('dt-location').value;
+      const notes = document.getElementById('dt-notes').value;
+
+      const dateRef = collection(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'dates');
+      await addDoc(dateRef, {
+        title,
+        dateTime,
+        location,
+        notes,
+        status: 'pending',
+        createdBy: currentUser.uid,
+        createdAt: new Date().toISOString()
+      });
+
+      document.getElementById('modal-date').classList.add('hidden');
+      document.getElementById('form-date').reset();
+    });
+
+    // Date Action Handlers
+    document.getElementById('dates-list').addEventListener('click', async (e) => {
+      const action = e.target.getAttribute('data-action');
+      const id = e.target.getAttribute('data-id');
+      if (!action || !id || !userProfile?.coupleId) return;
+
+      const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'couples', userProfile.coupleId, 'dates', id);
+      if (action === 'accept-date') {
+        await updateDoc(docRef, { status: 'accepted' });
+      } else if (action === 'decline-date') {
+        await updateDoc(docRef, { status: 'declined' });
+      }
+    });
+
+    // Navigation Tabs
+    document.querySelectorAll('.nav-tab').forEach(tabBtn => {
+      tabBtn.addEventListener('click', () => {
+        const targetTab = tabBtn.getAttribute('data-tab');
+
+        document.querySelectorAll('.nav-tab').forEach(btn => {
+          btn.classList.remove('active', 'text-rose-600', 'bg-rose-100', 'shadow-sm');
+          btn.classList.add('text-slate-600');
+        });
+        tabBtn.classList.add('active', 'text-rose-600', 'bg-rose-100', 'shadow-sm');
+        tabBtn.classList.remove('text-slate-600');
+
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.add('hidden');
+        });
+        document.getElementById(targetTab).classList.remove('hidden');
+      });
+    });
+
+    // Modal Triggers & Controls
+    document.getElementById('open-timeline-modal').addEventListener('click', () => document.getElementById('modal-timeline').classList.remove('hidden'));
+    document.getElementById('open-memory-modal').addEventListener('click', () => document.getElementById('modal-memory').classList.remove('hidden'));
+    document.getElementById('open-date-modal').addEventListener('click', () => document.getElementById('modal-date').classList.remove('hidden'));
+
+    document.querySelectorAll('[data-close-modal]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-close-modal');
+        document.getElementById(id).classList.add('hidden');
+      });
+    });
+
+    document.getElementById('copy-code-btn').addEventListener('click', () => {
+      const input = document.getElementById('my-link-code');
+      input.select();
+      document.execCommand('copy');
+      showNotice("Connection code copied!");
+    });
+
+    window.addEventListener('load', () => {
+      lucide.createIcons();
+      initAuth();
+    });
+  </script>
+</body>
+</html>
