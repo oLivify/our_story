@@ -542,16 +542,15 @@
 
     // Application ID and Configuration
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'relationship-tracker-app';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' 
-      ? JSON.parse(__firebase_config) 
-      : {
-          apiKey: "demo-api-key",
-          authDomain: "demo.firebaseapp.com",
-          projectId: "demo-project",
-          storageBucket: "demo.appspot.com",
-          messagingSenderId: "123456789",
-          appId: "1:123456789:web:abcdef"
-        };
+    const firebaseConfig = {
+      apiKey: "AIzaSyBmizyQigF97peaagtpIKLxvF874sS7w1w",
+      authDomain: "tracker-79eb1.firebaseapp.com",
+      projectId: "tracker-79eb1",
+      storageBucket: "tracker-79eb1.firebasestorage.app",
+      messagingSenderId: "1047676716273",
+      appId: "1:1047676716273:web:23b9c2dfb6f4999b3b1550",
+      measurementId: "G-Y7V1MQNBCD"
+    };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
