@@ -552,12 +552,12 @@ function renderTimeline(items) {
         <h4 class="font-bold text-rose-900 text-sm sm:text-base break-words min-w-0">${esc(i.title)}</h4>
         <div class="flex items-center gap-1.5"><span class="text-[11px] font-semibold text-rose-600 bg-rose-100 px-2.5 py-0.5 rounded-full">${esc(i.date)}</span>${delBtn('timeline', 'milestone', i.id)}</div></div>
         ${i.desc ? `<p class="text-xs text-rose-800 mt-1 break-words">${esc(i.desc)}</p>` : ''}
-        ${i.url ? `<img src="${esc(i.url)}" alt="${esc(i.title)}" loading="lazy" class="mt-2 w-full max-h-64 object-cover rounded-xl border border-rose-200">` : ''}</div></div>`).join('')
+        ${i.url ? `<div class="mt-2 rounded-xl overflow-hidden border border-rose-200 bg-rose-50"><img src="${esc(i.url)}" alt="${esc(i.title)}" loading="lazy" class="block w-full h-auto max-h-[28rem] object-contain"></div>` : ''}</div></div>`).join('')
     : '<p class="text-xs text-rose-400 italic">No milestones yet. Tap "Add Event" to create one!</p>'; lucide.createIcons();
 }
 function renderMemories(items) {
   $('memories-grid').innerHTML = items.length ? items.map(i => `
-    <div class="glass-panel rounded-3xl overflow-hidden">${i.url ? `<div class="h-48 bg-rose-50"><img src="${esc(i.url)}" alt="${esc(i.title)}" loading="lazy" class="w-full h-full object-cover"></div>` : '<div class="h-1.5 bg-gradient-to-r from-rose-300 to-rose-400"></div>'}
+    <div class="glass-panel rounded-3xl overflow-hidden">${i.url ? `<div class="bg-rose-50"><img src="${esc(i.url)}" alt="${esc(i.title)}" loading="lazy" class="block w-full h-auto max-h-96 object-contain"></div>` : '<div class="h-1.5 bg-gradient-to-r from-rose-300 to-rose-400"></div>'}
       <div class="p-4 space-y-1"><div class="flex justify-between items-start gap-2"><h4 class="font-bold text-rose-900 text-sm break-words min-w-0">${esc(i.title)}</h4>${delBtn('memories', 'memory', i.id)}</div>
       ${i.caption ? `<p class="text-xs text-rose-700 break-words">${esc(i.caption)}</p>` : ''}</div></div>`).join('')
     : '<p class="text-xs text-rose-400 italic col-span-full">No memories yet. Tap "Add Memory"!</p>'; lucide.createIcons();
