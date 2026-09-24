@@ -33,6 +33,17 @@ body{background:#fff0f3;color:#4a2c35;font-family:'Inter',sans-serif;overflow-x:
 .avatar-btn:hover .avatar{filter:brightness(.92)}
 .avatar-btn:focus-visible{outline:2px solid #f43f5e;outline-offset:3px}
 .sec-head{display:flex;justify-content:space-between;align-items:center;gap:.75rem}
+.icon-act{display:inline-flex;align-items:center;justify-content:center;width:2rem;height:2rem;border-radius:9999px;color:#fb7185;background:rgba(255,228,230,.7);transition:.15s;flex-shrink:0}
+.icon-act:hover{background:#ffe4e6;color:#e11d48}
+.photo-drop{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.7rem 1rem;border-radius:.75rem;border:1.5px dashed #fda4af;background:rgba(255,241,242,.75);color:#e11d48;font-size:.8rem;font-weight:600;cursor:pointer;transition:.15s}
+.photo-drop:hover{background:#ffe4e6;border-color:#fb7185}
+.photo-drop:focus-visible{outline:2px solid #f43f5e;outline-offset:2px}
+@media(pointer:coarse){.photo-drop{min-height:44px}}
+.gal-avatar{width:2.25rem;height:2.25rem;border-radius:9999px;background:#ffe4e6;border:2px solid #fff;display:flex;align-items:center;justify-content:center;font:600 .9rem 'Playfair Display',serif;color:#f43f5e;overflow:hidden;flex-shrink:0}
+.gal-dot{width:.5rem;height:.5rem;border-radius:9999px;background:#fecdd3;transition:.2s}
+.gal-dot.on{background:#f43f5e;width:1.25rem}
+@media(prefers-reduced-motion:reduce){#gal-img,.gal-dot{transition:none!important}}
+@media(pointer:coarse){.icon-act{width:2.5rem;height:2.5rem}}
 .sec-head .btn{flex-shrink:0}
 .nav-tab{display:flex;align-items:center;gap:.5rem;border-radius:.75rem;font-weight:600;color:#475569;transition:.15s}
 .nav-tab.active{color:#e11d48;background:#ffe4e6;box-shadow:0 1px 2px rgba(0,0,0,.06)}
@@ -110,7 +121,7 @@ header.top{padding-top:calc(.75rem + env(safe-area-inset-top))}
                 <div class="avatar"><img id="card-user-img" class="hidden w-full h-full object-cover" alt=""><span id="card-user-avatar-text">Y</span></div>
                 <span class="avatar-badge"><i data-lucide="camera" class="w-3.5 h-3.5"></i></span>
               </label>
-              <input type="file" id="user-photo-upload" accept="image/*" class="hidden">
+              <input type="file" id="user-photo-upload" accept="image/*,.heic,.heif,.hif,.avif,.tif,.tiff,.webp,.gif,.bmp,.jfif" class="hidden">
               <div id="card-user-name" class="mt-2 text-sm sm:text-base font-bold text-rose-900 break-words max-w-[7rem] sm:max-w-none">You</div>
             </div>
             <div class="flex flex-col items-center pt-4 sm:pt-6">
@@ -145,9 +156,38 @@ header.top{padding-top:calc(.75rem + env(safe-area-inset-top))}
       <section id="tab-memories" class="tab-content hidden space-y-6">
         <div class="sec-head">
           <div><h3 class="text-xl font-serif font-bold text-rose-800">Photo Memories</h3><p class="text-xs text-rose-500">Photos of your favorite dates and moments together</p></div>
-          <button data-open="modal-memory" class="btn btn-p"><i data-lucide="camera" class="w-4 h-4"></i><span>Add Photo</span></button>
+          <button data-open="modal-memory" class="btn btn-p"><i data-lucide="camera" class="w-4 h-4"></i><span>Add Memory</span></button>
         </div>
         <div id="memories-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6"></div>
+      </section>
+
+      <section id="tab-gallery" class="tab-content hidden space-y-6">
+        <div class="sec-head">
+          <div><h3 class="text-xl font-serif font-bold text-rose-800">Our Gallery</h3><p class="text-xs text-rose-500">A looping slideshow of photos you've both added</p></div>
+          <button id="gal-add-btn" class="btn btn-p"><i data-lucide="image-plus" class="w-4 h-4"></i><span>Add Photos</span></button>
+          <input type="file" id="gal-file-input" accept="image/*,.heic,.heif,.hif,.avif,.tif,.tiff,.webp,.gif,.bmp,.jfif" multiple class="hidden">
+        </div>
+        <div id="gallery-empty" class="glass-panel rounded-3xl p-8 text-center text-xs text-rose-400 italic">No photos yet. Tap "Add Photos" to start your slideshow!</div>
+        <div id="gallery-show" class="hidden glass-panel rounded-3xl overflow-hidden">
+          <div id="gal-stage" class="relative h-72 sm:h-[26rem] bg-rose-50 overflow-hidden">
+            <img id="gal-bg" alt="" class="absolute inset-0 w-full h-full object-cover" style="filter:blur(24px);transform:scale(1.15);opacity:.55">
+            <img id="gal-img" alt="Gallery photo" class="relative w-full h-full object-contain" style="transition:opacity .25s ease">
+            <button id="gal-prev" class="icon-act absolute left-3 top-1/2 -translate-y-1/2" style="background:rgba(255,255,255,.92)" aria-label="Previous photo"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+            <button id="gal-next" class="icon-act absolute right-3 top-1/2 -translate-y-1/2" style="background:rgba(255,255,255,.92)" aria-label="Next photo"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+            <div class="absolute top-3 right-3 flex gap-2">
+              <button id="gal-play" class="icon-act" style="background:rgba(255,255,255,.92)" aria-label="Pause or play slideshow"></button>
+              <button id="gal-del" data-del="gallery" data-label="photo" data-id="" class="icon-act" style="background:rgba(255,255,255,.92)" aria-label="Delete photo" title="Delete photo"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+            </div>
+            <div class="absolute inset-x-0 bottom-0 px-4 pb-3 pt-8 flex items-center gap-2.5 text-white" style="background:linear-gradient(to top,rgba(76,5,25,.7),transparent)">
+              <div id="gal-avatar" class="gal-avatar"></div>
+              <div class="min-w-0"><div class="text-[10px] uppercase tracking-widest opacity-80">Added by</div><div class="text-sm font-semibold truncate"><span id="gal-who"></span> <span id="gal-when" class="text-[11px] font-normal opacity-80"></span></div></div>
+            </div>
+          </div>
+          <div class="flex items-center justify-between gap-3 px-4 py-3">
+            <div id="gal-dots" class="flex flex-wrap items-center gap-1.5"></div>
+            <span id="gal-count" class="text-xs font-semibold text-rose-500 flex-shrink-0"></span>
+          </div>
+        </div>
       </section>
 
       <section id="tab-dates" class="tab-content hidden space-y-6">
@@ -209,6 +249,10 @@ header.top{padding-top:calc(.75rem + env(safe-area-inset-top))}
     <div><label class="lbl">Title</label><input type="text" id="tm-title" required placeholder="e.g. First Date, Moved In Together" class="field"></div>
     <div><label class="lbl">Date</label><input type="date" id="tm-date" required class="field"></div>
     <div><label class="lbl">Description / Notes</label><textarea id="tm-desc" rows="3" placeholder="What made this moment unforgettable?" class="field"></textarea></div>
+    <div><label class="lbl">Photo <span class="font-normal text-rose-400">(optional)</span></label>
+      <input type="file" id="tm-file-input" accept="image/*,.heic,.heif,.hif,.avif,.tif,.tiff,.webp,.gif,.bmp,.jfif" class="hidden">
+      <label for="tm-file-input" id="tm-pick-btn" class="photo-drop" tabindex="0" role="button"><i data-lucide="image-plus" class="w-4 h-4"></i><span id="tm-pick-label">Choose a photo</span></label>
+      <div id="tm-file-preview" class="hidden relative mt-2 h-32 rounded-xl overflow-hidden border border-rose-200"><img id="tm-preview-img" class="w-full h-full object-cover" alt=""><button type="button" id="tm-clear-btn" class="icon-act absolute top-2 right-2" style="background:rgba(255,255,255,.92)" aria-label="Remove photo" title="Remove photo"><i data-lucide="x" class="w-4 h-4"></i></button></div></div>
     <button type="submit" class="btn btn-p w-full">Save Milestone</button>
   </form>
 </div></div>
@@ -217,23 +261,32 @@ header.top{padding-top:calc(.75rem + env(safe-area-inset-top))}
   <div class="flex justify-between items-center"><h3 class="text-lg font-serif font-bold text-rose-800">Add Photo Memory</h3><button data-close-modal aria-label="Close" class="icon-btn text-rose-400"><i data-lucide="x" class="w-5 h-5"></i></button></div>
   <form id="form-memory" class="space-y-3">
     <div><label class="lbl">Memory Title</label><input type="text" id="mem-title" required placeholder="e.g. Summer Beach Trip" class="field"></div>
-    <div><label class="lbl">Photo</label>
-      <input type="file" id="mem-file-input" accept="image/*" class="w-full text-xs text-rose-700 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-rose-100 file:text-rose-700 cursor-pointer">
-      <div id="mem-file-preview" class="hidden mt-2 h-32 rounded-xl overflow-hidden border border-rose-200"><img id="mem-preview-img" class="w-full h-full object-cover" alt=""></div></div>
+    <div><label class="lbl">Photo <span class="font-normal text-rose-400">(optional)</span></label>
+      <input type="file" id="mem-file-input" accept="image/*,.heic,.heif,.hif,.avif,.tif,.tiff,.webp,.gif,.bmp,.jfif" class="hidden">
+      <label for="mem-file-input" id="mem-pick-btn" class="photo-drop" tabindex="0" role="button"><i data-lucide="image-plus" class="w-4 h-4"></i><span id="mem-pick-label">Choose a photo</span></label>
+      <div id="mem-file-preview" class="hidden relative mt-2 h-32 rounded-xl overflow-hidden border border-rose-200"><img id="mem-preview-img" class="w-full h-full object-cover" alt=""><button type="button" id="mem-clear-btn" class="icon-act absolute top-2 right-2" style="background:rgba(255,255,255,.92)" aria-label="Remove photo" title="Remove photo"><i data-lucide="x" class="w-4 h-4"></i></button></div></div>
     <div><label class="lbl">Caption / Story</label><textarea id="mem-caption" rows="2" placeholder="Write a cute note about this memory..." class="field"></textarea></div>
-    <button type="submit" class="btn btn-p w-full">Upload Memory</button>
+    <button type="submit" class="btn btn-p w-full">Save Memory</button>
   </form>
 </div></div>
 
 <div id="modal-date" class="modal hidden"><div class="glass-panel modal-card space-y-4">
-  <div class="flex justify-between items-center"><h3 class="text-lg font-serif font-bold text-rose-800">Propose a Date Night</h3><button data-close-modal aria-label="Close" class="icon-btn text-rose-400"><i data-lucide="x" class="w-5 h-5"></i></button></div>
+  <div class="flex justify-between items-center"><h3 id="dt-modal-title" class="text-lg font-serif font-bold text-rose-800">Propose a Date Night</h3><button data-close-modal aria-label="Close" class="icon-btn text-rose-400"><i data-lucide="x" class="w-5 h-5"></i></button></div>
   <form id="form-date" class="space-y-3">
     <div><label class="lbl">Date Idea Title</label><input type="text" id="dt-title" required placeholder="e.g. Picnic at the Park" class="field"></div>
     <div><label class="lbl">Date &amp; Time</label><input type="datetime-local" id="dt-datetime" required class="field"></div>
     <div><label class="lbl">Location</label><input type="text" id="dt-location" placeholder="e.g. Favorite Italian Restaurant" class="field"></div>
     <div><label class="lbl">Details / Notes</label><textarea id="dt-notes" rows="2" placeholder="Wear something nice!" class="field"></textarea></div>
-    <button type="submit" class="btn btn-p w-full">Send Date Proposal</button>
+    <p id="dt-edit-note" class="hidden text-[11px] text-rose-500">Changing the details sends this date back to your partner for a fresh yes or no.</p>
+    <button type="submit" id="dt-submit-btn" class="btn btn-p w-full">Send Date Proposal</button>
   </form>
+</div></div>
+
+<div id="modal-delete" class="modal hidden"><div class="glass-panel modal-card text-center space-y-4" style="max-width:22rem">
+  <div class="w-12 h-12 mx-auto rounded-full bg-rose-100 text-rose-500 flex items-center justify-center"><i data-lucide="trash-2" class="w-6 h-6"></i></div>
+  <h3 id="delete-title" class="text-lg font-serif font-bold text-rose-800">Delete this?</h3>
+  <p class="text-xs text-rose-700">This removes it for both of you and can't be undone.</p>
+  <div class="flex gap-2"><button data-close-modal class="btn btn-o flex-1">Cancel</button><button id="confirm-delete-btn" class="btn btn-p flex-1">Delete</button></div>
 </div></div>
 
 <div id="modal-unlink" class="modal hidden"><div class="glass-panel modal-card text-center space-y-4" style="max-width:22rem">
@@ -259,7 +312,7 @@ function heart(a,b,s,o){const t=s*.3;x.beginPath();x.fillStyle=`rgba(244,63,94,$
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
 const appId = 'tracker-79eb1-app';
 const firebaseConfig = {
@@ -283,8 +336,12 @@ const col = (...p) => collection(db, 'artifacts', appId, 'public', 'data', ...p)
 
 let me = null, profile = null, partner = null, couple = null, start = new Date(), tick = null, memImg = null;
 let unsubs = [], cUnsubs = [], activeCouple = null, watchedPartner = null;
+let datesById = {}, editingDate = null, pendingDelete = null;
+let gallery = [], gIdx = 0, gTimer = null, gPlaying = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+const icoBtn = (attrs, icon, label) => `<button ${attrs} class="icon-act" aria-label="${label}" title="${label}"><i data-lucide="${icon}" class="w-4 h-4"></i></button>`;
+const delBtn = (coll, label, id) => icoBtn(`data-del="${coll}" data-label="${label}" data-id="${id}"`, 'trash-2', `Delete ${label}`);
 
-const TABS = [['tab-counter','clock','Counter'],['tab-timeline','git-commit','Timeline'],['tab-memories','image','Memories'],['tab-dates','calendar','Dates'],['tab-settings','users','Partner']];
+const TABS = [['tab-counter','clock','Counter'],['tab-timeline','git-commit','Timeline'],['tab-memories','image','Memories'],['tab-gallery','images','Gallery'],['tab-dates','calendar','Dates'],['tab-settings','users','Partner']];
 const CNT = [['years','Years','text-rose-600'],['months','Months','text-rose-500'],['days','Days','text-rose-600'],['hours','Hours','text-pink-600'],['minutes','Minutes','text-pink-500'],['seconds','Seconds','text-rose-600']];
 
 const esc = s => (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
@@ -297,27 +354,46 @@ const showNotice = msg => { $('notify-message').textContent = msg; $('modal-noti
 const save = (p, msg) => p.catch(e => showNotice(`${msg || 'Could not save'}: ${e.message || e}`));
 const needCouple = () => { if (!profile?.coupleId) { showNotice('Connect with your partner first!'); return false; } return true; };
 
-function processImage(file, max = 1200, q = 0.8) {
-  return new Promise((res, rej) => {
-    if (!file || !file.type.startsWith('image/')) return rej(new Error('Selected file is not a valid image.'));
-    const r = new FileReader();
-    r.onerror = () => rej(new Error('Failed to read image file.'));
-    r.onload = e => {
-      const img = new Image();
-      img.onerror = () => rej(new Error('Could not process this image. Try a JPG or PNG.'));
-      img.onload = () => {
-        try {
-          let w = img.width, h = img.height;
-          if (w > max || h > max) { if (w > h) { h = Math.round(h * max / w); w = max; } else { w = Math.round(w * max / h); h = max; } }
-          const c = document.createElement('canvas'); c.width = w; c.height = h;
-          const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(img, 0, 0, w, h);
-          res(c.toDataURL('image/jpeg', q));
-        } catch (err) { rej(err); }
-      };
-      img.src = e.target.result;
-    };
-    r.readAsDataURL(file);
-  });
+const IMG_EXT = ['jpg','jpeg','jfif','pjpeg','pjp','png','apng','gif','webp','avif','bmp','ico','svg','heic','heif','hif','tif','tiff'];
+const extOf = f => ((f.name || '').split('.').pop() || '').toLowerCase();
+const isHeic = f => /hei[cf]/.test(f.type) || ['heic', 'heif', 'hif'].includes(extOf(f));
+const isTiff = f => /tiff?/.test(f.type) || ['tif', 'tiff'].includes(extOf(f));
+const loadScript = src => new Promise((res, rej) => { const t = document.createElement('script'); t.src = src; t.onload = res; t.onerror = () => rej(new Error('Could not load the photo converter. Check your connection and try again.')); document.head.appendChild(t); });
+const loadImg = blob => new Promise((res, rej) => {
+  const u = URL.createObjectURL(blob), i = new Image();
+  i.onload = () => { URL.revokeObjectURL(u); res(i); };
+  i.onerror = () => { URL.revokeObjectURL(u); rej(new Error('decode')); };
+  i.src = u;
+});
+async function decodeTiff(file) {
+  if (!window.UTIF) await loadScript('https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js');
+  const buf = await file.arrayBuffer(), ifds = UTIF.decode(buf); if (!ifds.length) throw new Error('decode');
+  UTIF.decodeImage(buf, ifds[0]);
+  const { width: w, height: h } = ifds[0], c = document.createElement('canvas'); c.width = w; c.height = h;
+  c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(UTIF.toRGBA8(ifds[0])), w, h), 0, 0);
+  return c;
+}
+async function processImage(file, max = 1200, q = 0.8) {
+  if (!file || !(file.type.startsWith('image/') || IMG_EXT.includes(extOf(file)))) throw new Error("That file doesn't look like a photo. Try a JPG, PNG, WebP, HEIC, GIF or TIFF image.");
+  let src;
+  try { src = await loadImg(file); }   // works natively for JPG, PNG, WebP, GIF, BMP, AVIF, SVG (and HEIC on Safari)
+  catch {
+    try {
+      if (isHeic(file)) {   // iPhone photos on browsers that can't read HEIC
+        if (!window.heic2any) await loadScript('https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js');
+        const out = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.9 });
+        src = await loadImg(Array.isArray(out) ? out[0] : out);
+      } else if (isTiff(file)) src = await decodeTiff(file);
+      else throw new Error('decode');
+    } catch (err) {
+      throw new Error(/converter/.test(err.message) ? err.message : "This photo format can't be read. Try saving it as a JPG or PNG.");
+    }
+  }
+  let w = src.naturalWidth || src.width || 1200, h = src.naturalHeight || src.height || 900;
+  if (w > max || h > max) { if (w > h) { h = Math.round(h * max / w); w = max; } else { w = Math.round(w * max / h); h = max; } }
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(src, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', q);
 }
 
 /* ---------- Navigation: desktop tabs + mobile hamburger drawer ---------- */
@@ -390,6 +466,7 @@ function setAvatar(who, url, name) {
   const i = $(`card-${who}-img`), t = $(`card-${who}-avatar-text`);
   if (url) { i.src = url; i.classList.remove('hidden'); t.classList.add('hidden'); }
   else { i.classList.add('hidden'); t.classList.remove('hidden'); t.textContent = (name || '?').charAt(0).toUpperCase(); }
+  paintCaption();
 }
 function setPartner(p, status) {
   $('nav-partner-status').textContent = status;
@@ -403,7 +480,7 @@ function resetCouple() {
   clearInterval(tick);
   CNT.forEach(([k]) => $('cnt-' + k).textContent = '0'); $('cnt-total-days').textContent = '0';
   $('start-date-input').value = '';
-  renderTimeline([]); renderMemories([]); renderDates([]);
+  renderTimeline([]); renderMemories([]); renderDates([]); renderGallery([]);
   setPartner(null, 'Not connected to a partner yet.'); toggleLinked(false);
 }
 
@@ -449,6 +526,7 @@ function syncCouple(id) {
   sub('timeline', renderTimeline, (a, b) => new Date(a.date) - new Date(b.date));
   sub('memories', renderMemories, (a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
   sub('dates', renderDates, (a, b) => new Date(a.dateTime) - new Date(b.dateTime));
+  sub('gallery', renderGallery, (a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
 }
 
 function startCounter() {
@@ -472,24 +550,28 @@ function renderTimeline(items) {
     <div class="relative"><div class="absolute -left-[27px] sm:-left-[31px] top-1 w-4 h-4 rounded-full bg-rose-500 border-2 border-white shadow"></div>
       <div class="glass-panel p-4 rounded-2xl space-y-1"><div class="flex flex-wrap justify-between items-start gap-2">
         <h4 class="font-bold text-rose-900 text-sm sm:text-base break-words min-w-0">${esc(i.title)}</h4>
-        <span class="text-[11px] font-semibold text-rose-600 bg-rose-100 px-2.5 py-0.5 rounded-full">${esc(i.date)}</span></div>
-        ${i.desc ? `<p class="text-xs text-rose-800 mt-1 break-words">${esc(i.desc)}</p>` : ''}</div></div>`).join('')
-    : '<p class="text-xs text-rose-400 italic">No milestones yet. Tap "Add Event" to create one!</p>';
+        <div class="flex items-center gap-1.5"><span class="text-[11px] font-semibold text-rose-600 bg-rose-100 px-2.5 py-0.5 rounded-full">${esc(i.date)}</span>${delBtn('timeline', 'milestone', i.id)}</div></div>
+        ${i.desc ? `<p class="text-xs text-rose-800 mt-1 break-words">${esc(i.desc)}</p>` : ''}
+        ${i.url ? `<img src="${esc(i.url)}" alt="${esc(i.title)}" loading="lazy" class="mt-2 w-full max-h-64 object-cover rounded-xl border border-rose-200">` : ''}</div></div>`).join('')
+    : '<p class="text-xs text-rose-400 italic">No milestones yet. Tap "Add Event" to create one!</p>'; lucide.createIcons();
 }
 function renderMemories(items) {
   $('memories-grid').innerHTML = items.length ? items.map(i => `
-    <div class="glass-panel rounded-3xl overflow-hidden"><div class="h-48 bg-rose-50"><img src="${i.url}" alt="${esc(i.title)}" loading="lazy" class="w-full h-full object-cover"></div>
-      <div class="p-4 space-y-1"><h4 class="font-bold text-rose-900 text-sm break-words">${esc(i.title)}</h4>
+    <div class="glass-panel rounded-3xl overflow-hidden">${i.url ? `<div class="h-48 bg-rose-50"><img src="${esc(i.url)}" alt="${esc(i.title)}" loading="lazy" class="w-full h-full object-cover"></div>` : '<div class="h-1.5 bg-gradient-to-r from-rose-300 to-rose-400"></div>'}
+      <div class="p-4 space-y-1"><div class="flex justify-between items-start gap-2"><h4 class="font-bold text-rose-900 text-sm break-words min-w-0">${esc(i.title)}</h4>${delBtn('memories', 'memory', i.id)}</div>
       ${i.caption ? `<p class="text-xs text-rose-700 break-words">${esc(i.caption)}</p>` : ''}</div></div>`).join('')
-    : '<p class="text-xs text-rose-400 italic col-span-full">No photo memories yet. Tap "Add Photo"!</p>';
+    : '<p class="text-xs text-rose-400 italic col-span-full">No memories yet. Tap "Add Memory"!</p>'; lucide.createIcons();
 }
 function renderDates(items) {
+  datesById = Object.fromEntries(items.map(i => [i.id, i]));
   const badge = { accepted: ['bg-emerald-100 text-emerald-700 border-emerald-300', 'Accepted ❤️'], declined: ['bg-rose-100 text-rose-700 border-rose-300', 'Declined'] };
   $('dates-list').innerHTML = items.length ? items.map(i => {
     const [bc, bt] = badge[i.status] || ['bg-amber-100 text-amber-700 border-amber-300', 'Pending Response'];
-    const mine = i.createdBy === me?.uid;
+    const mine = (i.proposedBy || i.createdBy) === me?.uid;
+    const who = i.editedBy ? (i.editedBy === me?.uid ? 'you' : (partner?.displayName || 'your partner')) : '';
     return `<div class="glass-panel p-5 rounded-3xl space-y-3"><div class="space-y-2">
-      <div class="flex flex-wrap justify-between items-start gap-2"><h4 class="font-bold text-rose-900 text-base break-words min-w-0">${esc(i.title)}</h4><span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${bc}">${bt}</span></div>
+      <div class="flex justify-between items-start gap-2"><h4 class="font-bold text-rose-900 text-base break-words min-w-0">${esc(i.title)}</h4><div class="flex items-center gap-1.5">${icoBtn(`data-action="edit-date" data-id="${i.id}"`, 'pencil', 'Edit date')}${delBtn('dates', 'date proposal', i.id)}</div></div>
+      <div class="flex flex-wrap items-center gap-2"><span class="text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${bc}">${bt}</span>${who ? `<span class="text-[10px] text-rose-500 italic">Updated by ${esc(who)}</span>` : ''}</div>
       <div class="text-xs space-y-1"><div class="flex items-center gap-1.5 text-rose-600 font-medium"><i data-lucide="clock" class="w-3.5 h-3.5"></i><span>${new Date(i.dateTime).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span></div>
       ${i.location ? `<div class="flex items-center gap-1.5 text-rose-700"><i data-lucide="map-pin" class="w-3.5 h-3.5"></i><span class="break-words min-w-0">${esc(i.location)}</span></div>` : ''}</div>
       ${i.notes ? `<p class="text-xs text-rose-800 bg-rose-50/80 p-2.5 rounded-2xl border border-rose-200 break-words">${esc(i.notes)}</p>` : ''}</div>
@@ -505,11 +587,20 @@ $('user-photo-upload').addEventListener('change', async e => {
   catch (err) { showNotice(err.message || 'Error processing photo. Try a different JPG or PNG.'); }
   e.target.value = '';
 });
-$('mem-file-input').addEventListener('change', async e => {
-  const f = e.target.files[0]; if (!f) return;
-  try { memImg = await processImage(f, 1200, 0.8); $('mem-preview-img').src = memImg; $('mem-file-preview').classList.remove('hidden'); }
-  catch (err) { memImg = null; $('mem-file-preview').classList.add('hidden'); showNotice(err.message || 'Error reading photo. Try a different image.'); }
-});
+function setupPicker(p, modalId, formId) {
+  const inp = $(p + '-file-input'), box = $(p + '-file-preview'), lbl = $(p + '-pick-label');
+  const st = { data: null, clear() { st.data = null; inp.value = ''; box.classList.add('hidden'); lbl.textContent = 'Choose a photo'; } };
+  inp.addEventListener('change', async () => {
+    const f = inp.files[0]; if (!f) return;
+    try { st.data = await processImage(f, 1200, 0.8); $(p + '-preview-img').src = st.data; box.classList.remove('hidden'); lbl.textContent = 'Change photo'; }
+    catch (err) { st.clear(); showNotice(err.message || 'Error reading photo. Try a different image.'); }
+  });
+  $(p + '-clear-btn').addEventListener('click', st.clear);
+  $(p + '-pick-btn').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inp.click(); } });
+  document.querySelector(`[data-open="${modalId}"]`).addEventListener('click', () => { $(formId).reset(); st.clear(); });
+  return st;
+}
+const memPick = setupPicker('mem', 'modal-memory', 'form-memory'), tmPick = setupPicker('tm', 'modal-timeline', 'form-timeline');
 $('save-start-date-btn').addEventListener('click', async () => {
   if (!profile?.coupleId) return showNotice('Please connect with your partner first in the Partner tab!');
   const v = $('start-date-input').value; if (!v) return;
@@ -554,24 +645,115 @@ $('confirm-unlink-btn').addEventListener('click', async () => {
 
 $('form-timeline').addEventListener('submit', e => {
   e.preventDefault(); if (!needCouple()) return;
-  save(addDoc(col('couples', profile.coupleId, 'timeline'), { title: $('tm-title').value, date: $('tm-date').value, desc: $('tm-desc').value, createdAt: new Date().toISOString() }));
-  $('modal-timeline').classList.add('hidden'); e.target.reset();
+  save(addDoc(col('couples', profile.coupleId, 'timeline'), { title: $('tm-title').value, date: $('tm-date').value, desc: $('tm-desc').value, url: tmPick.data, createdAt: new Date().toISOString() }));
+  $('modal-timeline').classList.add('hidden'); e.target.reset(); tmPick.clear();
 });
 $('form-memory').addEventListener('submit', e => {
   e.preventDefault(); if (!needCouple()) return;
-  if (!memImg) return showNotice('Please select a photo to upload!');
-  save(addDoc(col('couples', profile.coupleId, 'memories'), { title: $('mem-title').value, url: memImg, caption: $('mem-caption').value, createdAt: new Date().toISOString() }), 'Could not save photo');
-  $('modal-memory').classList.add('hidden'); e.target.reset(); $('mem-file-preview').classList.add('hidden'); memImg = null;
+  save(addDoc(col('couples', profile.coupleId, 'memories'), { title: $('mem-title').value, url: memPick.data, caption: $('mem-caption').value, createdAt: new Date().toISOString() }), 'Could not save photo');
+  $('modal-memory').classList.add('hidden'); e.target.reset(); memPick.clear();
 });
 $('form-date').addEventListener('submit', e => {
   e.preventDefault(); if (!needCouple()) return;
-  save(addDoc(col('couples', profile.coupleId, 'dates'), { title: $('dt-title').value, dateTime: $('dt-datetime').value, location: $('dt-location').value, notes: $('dt-notes').value, status: 'pending', createdBy: me.uid, createdAt: new Date().toISOString() }));
+  const f = { title: $('dt-title').value, dateTime: $('dt-datetime').value, location: $('dt-location').value, notes: $('dt-notes').value };
+  if (editingDate) {
+    const old = datesById[editingDate] || {};
+    if (Object.keys(f).some(k => (old[k] || '') !== f[k])) save(updateDoc(ref('couples', profile.coupleId, 'dates', editingDate), { ...f, status: 'pending', proposedBy: me.uid, editedBy: me.uid, editedAt: new Date().toISOString() }), 'Could not update date');
+    editingDate = null;
+  } else save(addDoc(col('couples', profile.coupleId, 'dates'), { ...f, status: 'pending', createdBy: me.uid, createdAt: new Date().toISOString() }));
   $('modal-date').classList.add('hidden'); e.target.reset();
 });
 $('dates-list').addEventListener('click', e => {
   const b = e.target.closest('[data-action]'); if (!b || !profile?.coupleId) return;
+  if (b.dataset.action === 'edit-date') return openDateEditor(b.dataset.id);
   save(updateDoc(ref('couples', profile.coupleId, 'dates', b.dataset.id), { status: b.dataset.action === 'accept-date' ? 'accepted' : 'declined' }));
 });
+
+const setDateModal = edit => {
+  $('dt-modal-title').textContent = edit ? 'Edit Date Night' : 'Propose a Date Night';
+  $('dt-submit-btn').textContent = edit ? 'Save Changes' : 'Send Date Proposal';
+  $('dt-edit-note').classList.toggle('hidden', !edit);
+};
+document.querySelector('[data-open="modal-date"]').addEventListener('click', () => { editingDate = null; $('form-date').reset(); setDateModal(false); });
+function openDateEditor(id) {
+  const d = datesById[id]; if (!d) return;
+  editingDate = id;
+  $('dt-title').value = d.title || ''; $('dt-datetime').value = d.dateTime || ''; $('dt-location').value = d.location || ''; $('dt-notes').value = d.notes || '';
+  setDateModal(true); $('modal-date').classList.remove('hidden');
+}
+$('app-content').addEventListener('click', e => {
+  const b = e.target.closest('[data-del]'); if (!b) return;
+  pendingDelete = { coll: b.dataset.del, id: b.dataset.id };
+  $('delete-title').textContent = `Delete this ${b.dataset.label}?`;
+  $('modal-delete').classList.remove('hidden');
+});
+$('confirm-delete-btn').addEventListener('click', async () => {
+  if (!pendingDelete || !profile?.coupleId) return;
+  const { coll, id } = pendingDelete, btn = $('confirm-delete-btn'); btn.disabled = true;
+  try { await deleteDoc(ref('couples', profile.coupleId, coll, id)); pendingDelete = null; $('modal-delete').classList.add('hidden'); }
+  catch (err) { $('modal-delete').classList.add('hidden'); showNotice("Couldn't delete: " + (err.message || err)); }
+  finally { btn.disabled = false; }
+});
+
+function whoIs(uid, fallback) {
+  if (uid === me?.uid) return { name: profile?.displayName || fallback || 'You', photo: profile?.photoUrl, mine: true };
+  return { name: partner?.displayName || fallback || 'Partner', photo: partner?.photoUrl };
+}
+function paintCaption() {
+  const g = gallery[gIdx]; if (!g) return;
+  const w = whoIs(g.addedBy, g.addedByName);
+  $('gal-avatar').innerHTML = w.photo ? `<img src="${esc(w.photo)}" alt="" class="w-full h-full object-cover">` : esc((w.name || '?').charAt(0).toUpperCase());
+  $('gal-who').textContent = w.mine ? `${w.name} (you)` : w.name;
+  $('gal-when').textContent = g.createdAt ? '· ' + new Date(g.createdAt).toLocaleDateString([], { dateStyle: 'medium' }) : '';
+  $('gal-count').textContent = `${gIdx + 1} / ${gallery.length}`;
+  $('gal-dots').innerHTML = gallery.length > 1 && gallery.length <= 12 ? gallery.map((_, n) => `<button data-go="${n}" class="gal-dot ${n === gIdx ? 'on' : ''}" aria-label="Photo ${n + 1}"></button>`).join('') : '';
+  $('gal-del').dataset.id = g.id;
+}
+function showSlide(i, fade = true) {
+  if (!gallery.length) return;
+  gIdx = (i + gallery.length) % gallery.length;
+  const url = gallery[gIdx].url;
+  const set = () => { $('gal-img').src = url; $('gal-bg').src = url; $('gal-img').style.opacity = 1; paintCaption(); };
+  if (!fade) return set();
+  $('gal-img').style.opacity = 0; setTimeout(set, 250);
+}
+function renderGallery(items) {
+  gallery = items; if (gIdx >= items.length) gIdx = 0;
+  $('gallery-empty').classList.toggle('hidden', items.length > 0);
+  $('gallery-show').classList.toggle('hidden', !items.length);
+  ['gal-prev', 'gal-next', 'gal-play'].forEach(id => $(id).classList.toggle('hidden', items.length < 2));
+  showSlide(gIdx, false);
+}
+function galTick() {
+  clearInterval(gTimer);
+  gTimer = setInterval(() => { if (gPlaying && gallery.length > 1 && !document.hidden && !$('tab-gallery').classList.contains('hidden')) showSlide(gIdx + 1); }, 4500);
+}
+function setPlayIcon() { $('gal-play').innerHTML = `<i data-lucide="${gPlaying ? 'pause' : 'play'}" class="w-4 h-4"></i>`; lucide.createIcons(); }
+$('gal-prev').addEventListener('click', () => { showSlide(gIdx - 1); galTick(); });
+$('gal-next').addEventListener('click', () => { showSlide(gIdx + 1); galTick(); });
+$('gal-play').addEventListener('click', () => { gPlaying = !gPlaying; setPlayIcon(); });
+$('gal-dots').addEventListener('click', e => { const b = e.target.closest('[data-go]'); if (b) { showSlide(+b.dataset.go); galTick(); } });
+let galX = null;
+$('gal-stage').addEventListener('touchstart', e => { galX = e.touches[0].clientX; }, { passive: true });
+$('gal-stage').addEventListener('touchend', e => {
+  if (galX === null) return;
+  const dx = e.changedTouches[0].clientX - galX; galX = null;
+  if (Math.abs(dx) > 40) { showSlide(gIdx + (dx < 0 ? 1 : -1)); galTick(); }
+});
+$('gal-add-btn').addEventListener('click', () => { if (needCouple()) $('gal-file-input').click(); });
+$('gal-file-input').addEventListener('change', async e => {
+  const files = [...e.target.files]; e.target.value = '';
+  if (!files.length || !needCouple()) return;
+  const btn = $('gal-add-btn'), lbl = btn.querySelector('span'); btn.disabled = true; let ok = 0, bad = 0, why = '';
+  for (const [n, f] of files.entries()) {
+    lbl.textContent = `Adding ${n + 1}/${files.length}…`;
+    try { await addDoc(col('couples', profile.coupleId, 'gallery'), { url: await processImage(f, 1200, 0.8), addedBy: me.uid, addedByName: profile.displayName || 'Someone', createdAt: new Date().toISOString() }); ok++; }
+    catch (err) { bad++; why = err.message; }
+  }
+  btn.disabled = false; lbl.textContent = 'Add Photos';
+  if (bad) showNotice(`${ok} photo${ok === 1 ? '' : 's'} added, ${bad} couldn't be added. ${why}`);
+});
+setPlayIcon(); galTick();
 
 $('copy-code-btn').addEventListener('click', async () => {
   const i = $('my-link-code');
