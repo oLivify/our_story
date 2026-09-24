@@ -204,14 +204,16 @@ header.top{padding-top:calc(.75rem + env(safe-area-inset-top))}
               <input type="text" id="my-link-code" readonly class="field font-mono text-rose-700 font-bold select-all">
               <button id="copy-code-btn" class="btn btn-o"><i data-lucide="copy" class="w-4 h-4"></i><span>Copy</span></button>
             </div>
-            <p class="text-[11px] text-rose-500">Share this code with your partner so they can link accounts with you!</p>
+            <p class="text-[11px] text-rose-500">Share this code with your partner so they can send you a link request.</p>
           </div>
           <hr class="border-rose-200">
+          <div id="incoming-box" class="hidden space-y-3"></div>
+          <div id="outgoing-box" class="hidden space-y-2"></div>
           <div id="link-section" class="space-y-2">
             <label class="lbl uppercase tracking-wider">Connect to Partner</label>
             <div class="flex flex-col sm:flex-row gap-2">
               <input type="text" id="partner-code-input" placeholder="Paste partner's connection code..." class="field" autocapitalize="none" autocomplete="off">
-              <button id="link-partner-btn" class="btn btn-p"><i data-lucide="link" class="w-4 h-4"></i><span>Link Partner</span></button>
+              <button id="link-partner-btn" class="btn btn-p"><i data-lucide="link" class="w-4 h-4"></i><span>Send Request</span></button>
             </div>
           </div>
           <div id="unlink-section" class="hidden space-y-2">
@@ -281,9 +283,9 @@ header.top{padding-top:calc(.75rem + env(safe-area-inset-top))}
 
 <div id="modal-link" class="modal hidden"><div class="glass-panel modal-card text-center space-y-4" style="max-width:22rem">
   <div id="link-confirm-avatar" class="avatar"></div>
-  <h3 class="text-lg font-serif font-bold text-rose-800">Link with <span id="link-confirm-name"></span>?</h3>
-  <p class="text-xs text-rose-700">You'll share a timeline, memories, gallery and date plans. Only continue if this is really your partner.</p>
-  <div class="flex gap-2"><button data-close-modal class="btn btn-o flex-1">Cancel</button><button id="confirm-link-btn" class="btn btn-p flex-1">Yes, link us</button></div>
+  <h3 class="text-lg font-serif font-bold text-rose-800">Send a link request to <span id="link-confirm-name"></span>?</h3>
+  <p class="text-xs text-rose-700">They'll have to accept before anything is shared. Check that this is really your partner.</p>
+  <div class="flex gap-2"><button data-close-modal class="btn btn-o flex-1">Cancel</button><button id="confirm-link-btn" class="btn btn-p flex-1">Send request</button></div>
 </div></div>
 
 <div id="modal-delete" class="modal hidden"><div class="glass-panel modal-card text-center space-y-4" style="max-width:22rem">
@@ -316,7 +318,7 @@ function heart(a,b,s,o){const t=s*.3;x.beginPath();x.fillStyle=`rgba(244,63,94,$
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getAuth, setPersistence, browserLocalPersistence, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, deleteDoc, onSnapshot, terminate, clearIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore, doc, setDoc, getDoc, updateDoc, collection, addDoc, deleteDoc, onSnapshot, terminate, clearIndexedDbPersistence, query, where, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-firestore.js";
 
 const appId = 'tracker-79eb1-app';
 const firebaseConfig = {
@@ -341,6 +343,7 @@ const col = (...p) => collection(db, 'artifacts', appId, 'public', 'data', ...p)
 let me = null, profile = null, partner = null, couple = null, start = new Date(), tick = null, memImg = null;
 let unsubs = [], cUnsubs = [], activeCouple = null, watchedPartner = null;
 let datesById = {}, editingDate = null, pendingDelete = null;
+let incoming = [], outgoing = [], notified = new Set(), finalizing = new Set(), reqPhotos = {};
 let gallery = [], gIdx = 0, gTimer = null, gPlaying = !matchMedia('(prefers-reduced-motion: reduce)').matches;
 const icoBtn = (attrs, icon, label) => `<button ${attrs} class="icon-act" aria-label="${label}" title="${label}"><i data-lucide="${icon}" class="w-4 h-4"></i></button>`;
 const delBtn = (coll, label, id) => icoBtn(`data-del="${coll}" data-label="${label}" data-id="${esc(id)}"`, 'trash-2', `Delete ${label}`);
@@ -470,7 +473,7 @@ $('auth-signup-btn').addEventListener('click', async e => {
 
 /* ---------- Live sync (everything lives in Firestore, so it follows each account across devices) ---------- */
 function cleanupCouple() { cUnsubs.forEach(u => u()); cUnsubs = []; activeCouple = null; watchedPartner = null; partner = null; couple = null; }
-function cleanup() { unsubs.forEach(u => u()); unsubs = []; cleanupCouple(); }
+function cleanup() { unsubs.forEach(u => u()); unsubs = []; incoming = []; outgoing = []; cleanupCouple(); }
 
 function setAvatar(who, url, name) {
   const i = $(`card-${who}-img`), t = $(`card-${who}-avatar-text`);
@@ -496,6 +499,8 @@ function resetCouple() {
 
 function syncProfile() {
   const ur = ref('users', me.uid);
+  const reqSnap = (field, set) => unsubs.push(onSnapshot(query(col('linkRequests'), where(field, '==', me.uid)), s => { set(s.docs.map(d => ({ id: d.id, ...d.data() }))); renderRequests(); processRequests(); }, console.error));
+  reqSnap('to', a => incoming = a); reqSnap('from', a => outgoing = a);
   unsubs.push(onSnapshot(ur, async snap => {
     if (!snap.exists()) {
       if (snap.metadata.fromCache) return;   // never overwrite a real profile because of an empty offline cache
@@ -507,7 +512,7 @@ function syncProfile() {
     const n = profile.displayName || 'You';
     ['nav-user-name', 'drawer-user-name', 'card-user-name'].forEach(i => $(i).textContent = n);
     $('my-link-code').value = me.uid;
-    setAvatar('user', profile.photoUrl, n);
+    setAvatar('user', profile.photoUrl, n); renderRequests(); processRequests();
     if (profile.coupleId) { toggleLinked(true); if (profile.coupleId !== activeCouple) syncCouple(profile.coupleId); }
     else { cleanupCouple(); resetCouple(); }
   }, console.error));
@@ -628,25 +633,76 @@ function confirmLink(p) {
     m.addEventListener('click', onClick); m.classList.remove('hidden');
   });
 }
+const reqFresh = r => (Date.now() - (r.createdAt?.toMillis ? r.createdAt.toMillis() : Date.now())) < 7 * 864e5;
+function loadReqPhoto(uid) {
+  const paint = u => document.querySelectorAll('[data-req-avatar]').forEach(el => { if (el.dataset.reqAvatar === uid && safeImg(u)) el.innerHTML = `<img src="${esc(safeImg(u))}" alt="" class="w-full h-full object-cover">`; });
+  if (uid in reqPhotos) return paint(reqPhotos[uid]);
+  reqPhotos[uid] = null; getDoc(ref('users', uid)).then(d => { reqPhotos[uid] = d.exists() ? d.data().photoUrl : null; paint(reqPhotos[uid]); }).catch(() => {});
+}
+function renderRequests() {
+  if (!profile) return;
+  const linked = !!profile.coupleId;
+  const inc = linked ? [] : incoming.filter(r => r.status !== 'accepted' && reqFresh(r));
+  const out = linked ? [] : outgoing.filter(r => r.status !== 'accepted' && reqFresh(r));
+  $('incoming-box').classList.toggle('hidden', !inc.length);
+  $('incoming-box').innerHTML = inc.map(r => `<div class="p-4 rounded-2xl bg-white/80 border border-rose-300 space-y-3">
+    <div class="flex items-center gap-3"><div class="gal-avatar" data-req-avatar="${esc(r.from)}">${esc((r.fromName || '?').charAt(0).toUpperCase())}</div><div class="text-sm font-semibold text-rose-900 min-w-0 break-words">${esc(r.fromName || 'Someone')} wants to link with you</div></div>
+    <p class="text-[11px] text-rose-600">Accepting shares your timeline, memories, gallery and date plans. Only accept if you know them.</p>
+    <div class="flex gap-2"><button data-req="accept" data-id="${esc(r.id)}" class="btn btn-g flex-1">Accept</button><button data-req="decline" data-id="${esc(r.id)}" class="btn btn-r flex-1">Decline</button></div></div>`).join('');
+  inc.forEach(r => { loadReqPhoto(r.from); if (!notified.has(r.id)) { notified.add(r.id); showNotice(`${r.fromName || 'Someone'} wants to link with you! Open the Partner tab to accept or decline.`); } });
+  $('outgoing-box').classList.toggle('hidden', !out.length);
+  $('outgoing-box').innerHTML = out.map(r => `<div class="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-center justify-between gap-3"><span class="min-w-0 break-words">Request sent to <b>${esc(r.toName || 'your partner')}</b>. Waiting for them to accept…</span><button data-req="cancel" data-id="${esc(r.id)}" class="btn btn-o">Cancel</button></div>`).join('');
+}
+async function processRequests() {   // finish links that were accepted, tidy up stale requests
+  if (!profile) return;
+  const linked = !!profile.coupleId;
+  for (const r of [...incoming, ...outgoing]) {
+    if (finalizing.has(r.id)) continue;
+    const acc = r.status === 'accepted', mine = r.from === me.uid;
+    if (mine && acc && r.coupleId && !linked && reqFresh(r)) {
+      finalizing.add(r.id);
+      try { const b = writeBatch(db); b.update(ref('users', me.uid), { coupleId: r.coupleId }); b.delete(ref('linkRequests', r.id)); await b.commit(); }
+      catch (err) { finalizing.delete(r.id); showNotice("Couldn't finish linking: " + (err.message || err)); }
+    } else if (!reqFresh(r) || (linked && (!acc || mine))) { finalizing.add(r.id); deleteDoc(ref('linkRequests', r.id)).catch(() => {}); }
+  }
+}
+async function acceptRequest(r) {
+  if (profile?.coupleId) return showNotice("You're already linked. Unlink first to connect with someone new.");
+  const fr = await getDoc(ref('users', r.from));
+  if (!fr.exists() || fr.data().coupleId) { await deleteDoc(ref('linkRequests', r.id)); return showNotice('That person is no longer available to link.'); }
+  const id = [me.uid, r.from].sort().join('_'), cr = ref('couples', id), partners = [me.uid, r.from], b = writeBatch(db);
+  if ((await getDoc(cr)).exists()) b.update(cr, { partners });   // re-linking restores previous shared data
+  else b.set(cr, { partners, createdAt: new Date().toISOString(), startDate: new Date(toLocalDate(new Date())).toISOString() });
+  b.update(ref('users', me.uid), { coupleId: id });
+  b.update(ref('linkRequests', r.id), { status: 'accepted', coupleId: id });
+  await b.commit();
+  showNotice(`You're now linked with ${r.fromName || 'your partner'}!`);
+}
+$('tab-settings').addEventListener('click', async e => {
+  const b = e.target.closest('[data-req]'); if (!b) return;
+  const r = [...incoming, ...outgoing].find(x => x.id === b.dataset.id); if (!r) return;
+  b.disabled = true;
+  try { if (b.dataset.req === 'accept') await acceptRequest(r); else await deleteDoc(ref('linkRequests', r.id)); }
+  catch (err) { b.disabled = false; showNotice("Couldn't complete that: " + (err.message || err)); }
+});
 $('link-partner-btn').addEventListener('click', async () => {
-  const code = $('partner-code-input').value.trim();
+  const code = $('partner-code-input').value.trim(), nf = "We couldn't find that code. Double-check it and try again.";
   if (!code) return showNotice("Please enter your partner's connection code.");
   if (code === me.uid) return showNotice('You cannot link your account with yourself!');
   if (profile?.coupleId) return showNotice("You're already linked. Unlink first to connect with someone new.");
+  if (code.includes('/')) return showNotice(nf);
   const btn = $('link-partner-btn'); btn.disabled = true;
   try {
-    const pr = ref('users', code), ps = await getDoc(pr);
-    if (!ps.exists()) return showNotice("We couldn't find that code. Double-check it and try again.");
+    const ps = await getDoc(ref('users', code));
+    if (!ps.exists()) return showNotice(nf);
     if (ps.data().coupleId) return showNotice('That person is already linked with someone else.');
     if (!(await confirmLink(ps.data()))) return;
-    const id = [me.uid, code].sort().join('_'), cr = ref('couples', id), partners = [me.uid, code];
-    if ((await getDoc(cr)).exists()) await updateDoc(cr, { partners });   // re-linking restores previous shared data
-    else await setDoc(cr, { partners, createdAt: new Date().toISOString(), startDate: new Date(toLocalDate(new Date())).toISOString() });
-    await updateDoc(ref('users', me.uid), { coupleId: id });
-    await updateDoc(pr, { coupleId: id });
+    const rr = ref('linkRequests', me.uid + '_' + code), name = ps.data().displayName || 'your partner';
+    await deleteDoc(rr).catch(() => {});
+    await setDoc(rr, { from: me.uid, to: code, fromName: profile.displayName || 'Someone', toName: name, status: 'pending', createdAt: serverTimestamp() });
     $('partner-code-input').value = '';
-    showNotice('Accounts linked successfully!');
-  } catch (err) { showNotice("Couldn't link accounts: " + (err.message || err)); }
+    showNotice(`Request sent to ${name}. You'll be linked as soon as they accept.`);
+  } catch (err) { showNotice("Couldn't send the request: " + (err.message || err)); }
   finally { btn.disabled = false; }
 });
 
@@ -654,9 +710,7 @@ $('confirm-unlink-btn').addEventListener('click', async () => {
   const id = profile?.coupleId; if (!id) return;
   const btn = $('confirm-unlink-btn'); btn.disabled = true;
   try {
-    const pid = (couple?.partners || []).find(x => x !== me.uid);
     await updateDoc(ref('couples', id), { partners: [], unlinkedAt: new Date().toISOString() });
-    if (pid) await updateDoc(ref('users', pid), { coupleId: null }).catch(() => {});   // partner also self-unlinks via the couple doc if this is blocked
     await updateDoc(ref('users', me.uid), { coupleId: null });
     $('modal-unlink').classList.add('hidden');
     showNotice("You've been unlinked. Your shared memories are saved if you ever link again.");
